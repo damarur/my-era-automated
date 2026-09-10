@@ -1,0 +1,48 @@
+name: Clock out
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Mon-Thu 17:00 Europe/Madrid = 15:00 UTC (CEST) or 16:00 UTC (CET)
+    - cron: '0 15,16 * * 1-4'
+    # Fri 14:00 Europe/Madrid = 12:00 UTC (CEST) or 13:00 UTC (CET)
+    - cron: '0 12,13 * * 5'
+
+jobs:
+  clock-out:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Guard against DST duplicate run
+        id: check
+        run: |
+          hour=$(TZ=Europe/Madrid date +%H)
+          dow=$(TZ=Europe/Madrid date +%u) # 1=Mon .. 5=Fri
+          if { [ "$dow" -le 4 ] && [ "$hour" = "17" ]; } || { [ "$dow" -eq 5 ] && [ "$hour" = "14" ]; }; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Login and get token
+        id: login
+        if: steps.check.outputs.should_run == 'true'
+        run: |
+          headers=$(curl -sS -D - -o /dev/null -X POST https://hcs.eratime.eu/api/proxy/login \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -H "hcs-application-key: ERAATTENDANCE" \
+            -H "hcs-customer-key: lufthansa" \
+            -H "hcs-user: ${{ secrets.ERA_USER }}" \
+            -H "hcs-pass: ${{ secrets.ERA_PASS }}")
+          token=$(echo "$headers" | grep -i '^hcs-token:' | sed -E 's/^[Hh]cs-[Tt]oken: *//' | tr -d '\r\n')
+          echo "::add-mask::$token"
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+
+      - name: Clock out (TYPE=2)
+        if: steps.check.outputs.should_run == 'true'
+        run: |
+          curl -sS -f -X POST "https://hcs.eratime.eu/api/proxy/flt/myera/feature/clocking?TYPE=2" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -H "hcs-application-key: ERAATTENDANCE" \
+            -H "hcs-customer-key: lufthansa" \
+            -H "hcs-user-code: ${{ secrets.ERA_USER }}" \
+            -H "hcs-token: ${{ steps.login.outputs.token }}"

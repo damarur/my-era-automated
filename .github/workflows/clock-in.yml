@@ -1,0 +1,46 @@
+name: Clock in
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 08:00 Europe/Madrid is 06:00 UTC (CEST) or 07:00 UTC (CET).
+    # Both are scheduled every day; the guard step below skips the wrong one.
+    - cron: '0 6,7 * * *'
+
+jobs:
+  clock-in:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Guard against DST duplicate run
+        id: check
+        run: |
+          hour=$(TZ=Europe/Madrid date +%H)
+          if [ "$hour" = "08" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Login and get token
+        id: login
+        if: steps.check.outputs.should_run == 'true'
+        run: |
+          headers=$(curl -sS -D - -o /dev/null -X POST https://hcs.eratime.eu/api/proxy/login \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -H "hcs-application-key: ERAATTENDANCE" \
+            -H "hcs-customer-key: lufthansa" \
+            -H "hcs-user: ${{ secrets.ERA_USER }}" \
+            -H "hcs-pass: ${{ secrets.ERA_PASS }}")
+          token=$(echo "$headers" | grep -i '^hcs-token:' | sed -E 's/^[Hh]cs-[Tt]oken: *//' | tr -d '\r\n')
+          echo "::add-mask::$token"
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+
+      - name: Clock in (TYPE=1)
+        if: steps.check.outputs.should_run == 'true'
+        run: |
+          curl -sS -f -X POST "https://hcs.eratime.eu/api/proxy/flt/myera/feature/clocking?TYPE=1" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -H "hcs-application-key: ERAATTENDANCE" \
+            -H "hcs-customer-key: lufthansa" \
+            -H "hcs-user-code: ${{ secrets.ERA_USER }}" \
+            -H "hcs-token: ${{ steps.login.outputs.token }}"
