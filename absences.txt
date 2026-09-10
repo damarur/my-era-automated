@@ -1,0 +1,5 @@
+# Dates to skip clock-in/clock-out (absences, holidays, sick days, etc).
+# One entry per line, either a single date or an inclusive range:
+#   2026-09-15
+#   2026-09-21:2026-09-25
+# Lines starting with # are comments.

@@ -12,30 +12,35 @@ jobs:
   clock-out:
     runs-on: ubuntu-latest
     steps:
-      - name: Guard against DST duplicate run
+      - uses: actions/checkout@v4
+
+      - name: Guard against DST duplicate run / absences
         id: check
         run: |
           hour=$(TZ=Europe/Madrid date +%H)
           dow=$(TZ=Europe/Madrid date +%u) # 1=Mon .. 5=Fri
+          today=$(TZ=Europe/Madrid date +%F)
+          should_run=false
           if { [ "$dow" -le 4 ] && [ "$hour" = "17" ]; } || { [ "$dow" -eq 5 ] && [ "$hour" = "14" ]; }; then
-            echo "should_run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            should_run=true
           fi
+          while IFS= read -r line; do
+            line="${line%%#*}"; line="$(echo "$line" | xargs)"
+            [ -z "$line" ] && continue
+            start="${line%%:*}"; end="${line##*:}"
+            if [ "$today" \> "$start" -o "$today" = "$start" ] && [ "$today" \< "$end" -o "$today" = "$end" ]; then
+              should_run=false
+            fi
+          done < absences.txt
+          echo "should_run=$should_run" >> "$GITHUB_OUTPUT"
 
       - name: Login and get token
         id: login
         if: steps.check.outputs.should_run == 'true'
-        run: |
-          headers=$(curl -sS -D - -o /dev/null -X POST https://hcs.eratime.eu/api/proxy/login \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -H "hcs-application-key: ERAATTENDANCE" \
-            -H "hcs-customer-key: lufthansa" \
-            -H "hcs-user: ${{ secrets.ERA_USER }}" \
-            -H "hcs-pass: ${{ secrets.ERA_PASS }}")
-          token=$(echo "$headers" | grep -i '^hcs-token:' | sed -E 's/^[Hh]cs-[Tt]oken: *//' | tr -d '\r\n')
-          echo "::add-mask::$token"
-          echo "token=$token" >> "$GITHUB_OUTPUT"
+        uses: ./.github/actions/era-login
+        with:
+          user: ${{ secrets.ERA_USER }}
+          pass: ${{ secrets.ERA_PASS }}
 
       - name: Clock out (TYPE=2)
         if: steps.check.outputs.should_run == 'true'
