@@ -2,10 +2,11 @@ name: Clock in
 
 on:
   workflow_dispatch:
-  schedule:
-    # 08:00 Europe/Madrid is 06:00 UTC (CEST) or 07:00 UTC (CET).
-    # Both are scheduled every day; the guard step below skips the wrong one.
-    - cron: '0 6,7 * * *'
+  # ponytail: schedule disabled (untrusted cron timing), re-enable when confidence returns
+  # schedule:
+  #   # 08:00 Europe/Madrid is 06:00 UTC (CEST) or 07:00 UTC (CET).
+  #   # Both are scheduled every day; the guard step below skips the wrong one.
+  #   - cron: '0 6,7 * * *'
 
 jobs:
   clock-in:
