@@ -9,16 +9,18 @@
     td, th { padding: 4px 12px 4px 0; text-align: left; }
     button { padding: 8px 16px; margin-right: 8px; cursor: pointer; }
     #status { color: #2e7d32; margin-left: 8px; }
-    small { color: #666; }
+        small { color: #666; }
   </style>
 </head>
 <body>
-  <h2>Reminders</h2>
+  <h2>Settings</h2>
   <label><input type="checkbox" id="enabled"> Enable reminders</label>
   <table>
-    <thead><tr><th>Day</th><th>Active</th><th>Clock in</th><th>Clock out</th></tr></thead>
+    <thead><tr><th>Day</th><th>Active</th><th>Clock in</th><th>Clock out</th><th>Break</th><th>From</th><th>To</th><th>Daily target</th></tr></thead>
     <tbody id="days"></tbody>
   </table>
+
+  <small>The break is unpaid and deducted from the daily worked time. If you already clocked out/in during the day, that gap is used instead. The minimum required break is 30 min; untick Break for days without one. The daily target (default 07:36) is only used to compare against the worked time in the weekly summary.</small>
 
   <p><button id="save">Save</button><button id="reset">Reset to defaults</button><span id="status"></span></p>
   <small>Times use your computer's local timezone. Reminders only fire while Chrome is running.</small>

@@ -53,10 +53,11 @@ Each run:
 
 1. Open `chrome://extensions`, enable **Developer mode**.
 2. **Load unpacked** → select the `extension/` folder.
-3. Click the extension icon, enter user code + password, press **Clock in** / **Clock out**.
+3. Click the extension icon, enter user code + password and press **Login**. It only verifies them against MyEra and saves them if valid.
+4. Press **Clock in** / **Clock out**. **Clear credentials** removes the saved user and password.
 
 ### Reminders
 
-A notification fires at the configured clock-in / clock-out times (click it to open the popup). Configure per weekday (Mon–Fri only) from the popup's **Reminder settings** link. Defaults: Mon–Thu 08:00 / 17:00, Fri 08:00 / 14:00. Times use the computer's local timezone, and reminders only fire while Chrome is running. They remind only, they never clock for you.
+A notification fires at the configured clock-in / clock-out times (click it to open the popup). Configure per weekday (Mon–Fri only) the daily target (default 07:36, informational) and the daily unpaid break window (default 13:00–14:00, can be turned off per day) from the popup's **Settings** link. Defaults: Mon–Thu 08:00 / 17:00, Fri 08:00 / 14:00. Times use the computer's local timezone, and reminders only fire while Chrome is running. They remind only, they never clock for you. The break window is deducted from each day's worked time in the weekly summary (if a break was clocked out/in that day, the real gap is used instead). The summary also shows each day's target and the difference (worked − target). The **Week** row shows the total worked, the weekly target and the difference (negative = hours still to do). The weekly target is the average of the configured daily targets times the working days: on a normal week each day keeps its own target, but when a day is off (MyEra reports an `absences` entry or a public holiday, shown as "Absent"/"Holiday") the average is spread over the remaining days, so e.g. a 38h week (7h36 average) with a Friday holiday becomes 4 × 7h36 = 30h24.
 
 Credentials are stored in `chrome.storage.local` (this browser only, unencrypted) and are only sent to `hcs.eratime.eu`. Nothing goes to any other server.

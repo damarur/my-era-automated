@@ -13,7 +13,11 @@ function render(settings) {
       <td>${DAY_NAMES[d]}</td>
       <td><input type="checkbox" class="en" ${cfg.enabled ? "checked" : ""}></td>
       <td><input type="time" class="in" value="${cfg.in}"></td>
-      <td><input type="time" class="out" value="${cfg.out}"></td>`;
+      <td><input type="time" class="out" value="${cfg.out}"></td>
+      <td><input type="checkbox" class="bon" ${cfg.breakEnabled ? "checked" : ""}></td>
+      <td><input type="time" class="bs" value="${cfg.breakStart}"></td>
+      <td><input type="time" class="be" value="${cfg.breakEnd}"></td>
+      <td><input type="time" class="tg" value="${cfg.target}"></td>`;
     $("days").appendChild(tr);
   }
 }
@@ -25,19 +29,30 @@ function collect() {
       enabled: tr.querySelector(".en").checked,
       in: tr.querySelector(".in").value,
       out: tr.querySelector(".out").value,
+      breakEnabled: tr.querySelector(".bon").checked,
+      breakStart: tr.querySelector(".bs").value,
+      breakEnd: tr.querySelector(".be").value,
+      target: tr.querySelector(".tg").value || "00:00",
     };
   }
   return { remindersEnabled: $("enabled").checked, days };
 }
 
+const minutes = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+
 function flash(msg) {
   $("status").textContent = msg;
-  setTimeout(() => ($("status").textContent = ""), 2000);
+  setTimeout(() => ($("status").textContent = ""), 4000);
 }
 
 $("save").addEventListener("click", async () => {
-  await chrome.storage.local.set({ settings: collect() });
-  flash("Saved");
+  const settings = collect();
+  await chrome.storage.local.set({ settings });
+  const short = ORDER.filter((d) => {
+    const c = settings.days[d];
+    return c.breakEnabled && minutes(c.breakEnd) - minutes(c.breakStart) < 30;
+  });
+  flash(short.length ? `Saved. Warning: break under 30 min on ${short.map((d) => DAY_NAMES[d]).join(", ")}` : "Saved");
 });
 $("reset").addEventListener("click", async () => {
   await chrome.storage.local.remove("settings");

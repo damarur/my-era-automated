@@ -4,28 +4,95 @@
   <meta charset="utf-8">
   <title>MyEra Clock</title>
   <style>
-    body { font: 14px system-ui, sans-serif; width: 260px; margin: 12px; }
+    body { font: 14px system-ui, sans-serif; width: 320px; margin: 12px; }
     label { display: block; margin-bottom: 8px; }
     input { width: 100%; box-sizing: border-box; padding: 6px; margin-top: 2px; }
+    [hidden] { display: none !important; }
+    svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
     .row { display: flex; gap: 8px; margin-top: 12px; }
-    button { flex: 1; padding: 8px; cursor: pointer; }
-    #in { background: #2e7d32; color: #fff; border: 0; border-radius: 4px; }
-    #out { background: #c62828; color: #fff; border: 0; border-radius: 4px; }
+    button, #settings {
+      flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 10px 8px; font: inherit; font-weight: 600; cursor: pointer;
+      border-radius: 6px; border: 1px solid transparent; box-sizing: border-box; text-decoration: none;
+    }
     button:disabled { opacity: .5; cursor: default; }
-    #status { margin-top: 10px; min-height: 1.2em; font-size: 13px; }
-    .ok { color: #2e7d32; } .err { color: #c62828; }
-    small { color: #666; display: block; margin-top: 8px; }
+    #in { background: #2e7d32; color: #fff; }
+    #in:hover:not(:disabled) { background: #256b29; }
+    #out { background: #c62828; color: #fff; }
+    #out:hover:not(:disabled) { background: #ad2121; }
+    #login { background: #1a237e; color: #fff; }
+    #clear { background: #fff; color: #c62828; border-color: #ef9a9a; }
+    #clear:hover:not(:disabled) { background: #ffebee; }
+    .footer button, .footer a { padding: 10px 4px; gap: 4px; font-size: 13px; white-space: nowrap; min-width: 0; }
+    .footer svg { width: 16px; height: 16px; }
+    #open { color: #1b5e20; background: #e8f5e9; border-color: #a5d6a7; }
+    #open:hover { background: #c8e6c9; }
+    #settings { color: #1a237e; background: #e8eaf6; border-color: #9fa8da; }
+    #settings:hover { background: #c5cae9; }
+    #status { margin-top: 8px; font-size: 13px; }
+    #status:empty { display: none; }
+    .ok, .pos { color: #2e7d32; } .err, .neg { color: #c62828; } .pending { color: #888; }
+    table { width: 100%; margin-top: 12px; border-collapse: collapse; }
+    th { font-size: 11px; font-weight: 600; color: #666; text-align: right; padding-bottom: 2px; }
+    th:nth-child(-n+2), td:nth-child(-n+2) { text-align: left; }
+    td:first-child { width: 2.5em; }
+    td { padding: 2px 0; text-align: right; font-variant-numeric: tabular-nums; }
+    tr.today td:nth-child(-n+3) { font-weight: 600; }
+    tfoot td:first-child { width: auto; }
+    tfoot td { border-top: 1px solid #ccc; font-weight: 600; padding-top: 4px; }
+    .warn { margin-top: 12px; padding: 8px 10px; font-size: 12px; color: #6d4c00; background: #fff8e1; border: 1px solid #ffc107; border-left-width: 4px; border-radius: 4px; }
   </style>
 </head>
 <body>
-  <label>User code <input id="user" autocomplete="username"></label>
-  <label>Password <input id="pass" type="password" autocomplete="current-password"></label>
-  <div class="row">
-    <button id="in">Clock in</button>
-    <button id="out">Clock out</button>
+  <div id="loginView">
+    <label>User code <input id="user" autocomplete="username"></label>
+    <label>Password <input id="pass" type="password" autocomplete="current-password"></label>
+    <div class="row">
+      <button id="login">
+        <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+        Login
+      </button>
+    </div>
   </div>
+
+  <div id="clockView" hidden>
+    <div>Logged in as <b id="who"></b></div>
+    <div class="row">
+      <button id="in">
+        <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+        Clock in
+      </button>
+      <button id="out">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        Clock out
+      </button>
+    </div>
+    <table id="week">
+      <thead><tr><th>Day</th><th>Date</th><th>Worked</th><th>Target</th><th>Diff</th></tr></thead>
+      <tbody></tbody>
+      <tfoot><tr><td colspan="2">Week</td><td id="weekTotal">–</td><td id="weekTarget">–</td><td id="weekDiff">–</td></tr></tfoot>
+    </table>
+  </div>
+
   <div id="status"></div>
-  <small>Credentials saved locally in this browser only. <a href="#" id="settings">Reminder settings</a></small>
+
+  <div class="row footer">
+    <button id="open">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      myEra
+    </button>
+    <a href="#" id="settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </a>
+    <button id="clear" hidden title="Clear credentials">
+      <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+      Clear
+    </button>
+  </div>
+
+  <div class="warn">⚠️ Credentials are saved unencrypted, locally in this browser only.</div>
+  <script src="settings.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
