@@ -3,11 +3,11 @@ const DEFAULT_SETTINGS = {
   remindersEnabled: true,
   // key = Date#getDay(): 1=Mon .. 5=Fri. break* = unpaid break window, deducted from worked time; target = daily hours to complete (informative).
   days: {
-    1: { enabled: true, in: "08:00", out: "17:00", breakEnabled: true, breakStart: "13:00", breakEnd: "14:00", target: "07:36" },
-    2: { enabled: true, in: "08:00", out: "17:00", breakEnabled: true, breakStart: "13:00", breakEnd: "14:00", target: "07:36" },
-    3: { enabled: true, in: "08:00", out: "17:00", breakEnabled: true, breakStart: "13:00", breakEnd: "14:00", target: "07:36" },
-    4: { enabled: true, in: "08:00", out: "17:00", breakEnabled: true, breakStart: "13:00", breakEnd: "14:00", target: "07:36" },
-    5: { enabled: true, in: "08:00", out: "14:00", breakEnabled: true, breakStart: "13:00", breakEnd: "14:00", target: "07:36" },
+    1: { enabled: true, in: "08:00", out: "17:00", breakEnabled: true, breakStart: "13:00", breakEnd: "14:00", target: "08:00" },
+    2: { enabled: true, in: "08:00", out: "17:00", breakEnabled: true, breakStart: "13:00", breakEnd: "14:00", target: "08:00" },
+    3: { enabled: true, in: "08:00", out: "17:00", breakEnabled: true, breakStart: "13:00", breakEnd: "14:00", target: "08:00" },
+    4: { enabled: true, in: "08:00", out: "17:00", breakEnabled: true, breakStart: "13:00", breakEnd: "14:00", target: "08:00" },
+    5: { enabled: true, in: "08:00", out: "14:00", breakEnabled: false, breakStart: "13:00", breakEnd: "14:00", target: "06:00" },
   },
 };
 

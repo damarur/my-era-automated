@@ -27,8 +27,8 @@ Open them from the popup's **Settings** link. Everything is configured per weekd
 |---|---|---|
 | Active | Send reminders that day | on |
 | Clock in / Clock out | When the reminder fires | Mon–Thu 08:00 / 17:00, Fri 08:00 / 14:00 |
-| Lunch break | Unpaid window deducted from the worked time (can be switched off per day) | 13:00–14:00 |
-| Daily target | Hours to complete that day | 07:36 |
+| Lunch break | Unpaid window deducted from the worked time (can be switched off per day) | Mon–Thu 13:00–14:00, Fri off |
+| Daily target | Hours to complete that day | Mon–Thu 08:00, Fri 06:00 |
 
 Reminders are notifications (click one to open the popup). They only fire while Chrome is running, use the computer's local timezone and never clock for you.
 
@@ -49,7 +49,7 @@ Daily target 07:36 and a 30 min lunch break from 13:00 to 13:30:
 | Target | 7h 36m |
 | **Diff** | **+0h 00m** |
 
-Clocking out later adds to the difference (out at 17:00 → 8h 30m worked, +0h 54m); leaving earlier subtracts from it. To mirror this setup, set the lunch break to 13:00–13:30 in Settings (the default is a 1 h break).
+Clocking out later adds to the difference (out at 17:00 → 8h 30m worked, +0h 54m); leaving earlier subtracts from it. To mirror this setup, set the lunch break to 13:00–13:30 in Settings (the defaults are a 1 h break and an 08:00 target).
 
 ### Example: different targets per day
 
@@ -64,8 +64,8 @@ The week adds up to 4 × 8h + 6h = **38h**. In Settings this is: Mon–Thu clock
 
 ### Weekly and monthly target
 
-The target of a period is the sum of the daily targets of its working days: five days of 07:36 make a 38h week.
+The target of a period is the sum of the daily targets of its working days: 4 × 8h + 6h make a 38h week with the defaults.
 
-When a day is off (MyEra reports an absence or a public holiday, shown as "Absent" / "Holiday") its target is 0 and the weekly average is spread over the remaining days, so the week doesn't go over. For example, a 38h week (7h36 average) with a Friday holiday becomes 4 × 7h36 = 30h24.
+When any day of the week is off (MyEra reports an absence or a public holiday, shown as "Absent" / "Holiday"), the per-day targets from Settings are **not applied** for that week. The off day gets a target of 0 and every remaining day gets the daily average, which with the defaults is (4 × 8h + 6h) / 5 = **7h 36m**, so the week never goes over. For example, with a Friday holiday the week becomes 4 × 7h36 = 30h24, and with an absence on a Wednesday, Mon, Tue, Thu and Fri all target 7h36. The average is computed from your configured daily targets, so it changes if you change them.
 
 In the month view this is applied week by week, and the target only counts days up to today, so mid-month you aren't shown hours that are not due yet.
