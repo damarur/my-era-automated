@@ -1,63 +1,71 @@
 # my-era-automated
 
-Automates daily clock in/out on [MyEra](https://hcs.eratime.eu) using GitHub Actions, so you don't have to remember to do it manually.
+A Chrome extension to clock in/out on [MyEra](https://hcs.eratime.eu), with weekday reminders and a weekly/monthly hours summary.
 
-## Schedule (Europe/Madrid)
+## Install
 
-| Workflow | When |
-|---|---|
-| `clock-in.yml` | Every day at 08:00 |
-| `clock-out.yml` | 17:00 Monday–Thursday, 14:00 Friday |
+`extension/` is a Manifest V3 Chrome extension that clocks in/out from a popup.
 
-GitHub Actions cron only runs in UTC, so each workflow is scheduled for both possible UTC offsets (CET/CEST) and a guard step checks the actual Madrid local time before doing anything, skipping the run that doesn't match. This keeps the schedule correct across DST changes without duplicate clock-ins/outs.
-
-Both workflows can also be run manually from the **Actions** tab (`workflow_dispatch`).
-
-## Setup
-
-Add two repository secrets with your MyEra credentials:
-
-**Settings → Secrets and variables → Actions → New repository secret**
-
-| Secret | Value |
-|---|---|
-| `ERA_USER` | your MyEra user code |
-| `ERA_PASS` | your MyEra password |
-
-No other configuration is needed — the workflows in `.github/workflows/` pick them up automatically.
-
-## Skipping absences
-
-To stop clock-in/clock-out on specific days (e.g. sick leave, vacation), add a line to `absences.txt`:
-
-```
-2026-09-15
-2026-09-21:2026-09-25
-```
-
-Single dates or inclusive `start:end` ranges, one per line. Commit the change (or edit directly on GitHub) before the next scheduled run — no need to disable the workflow.
-
-## How it works
-
-Each run:
-1. Logs in to MyEra with the credentials above and extracts the `Hcs-Token` auth header.
-2. Calls the clocking endpoint with `TYPE=1` (clock in) or `TYPE=2` (clock out) using that token.
-
-## Local testing
-
-`era-time.http` contains the same two requests for manual testing with an HTTP client (e.g. the IntelliJ/VS Code HTTP client). It is git-ignored since it's meant to hold your real credentials locally — never commit it.
-
-## Chrome extension
-
-`extension/` is a Manifest V3 Chrome extension that does the same clock in/out from a popup.
-
-1. Open `chrome://extensions`, enable **Developer mode**.
+1. Open `chrome://extensions` and enable **Developer mode**.
 2. **Load unpacked** → select the `extension/` folder.
 3. Click the extension icon, enter user code + password and press **Login**. It only verifies them against MyEra and saves them if valid.
-4. Press **Clock in** / **Clock out**. **Clear credentials** removes the saved user and password.
-
-### Reminders
-
-A notification fires at the configured clock-in / clock-out times (click it to open the popup). Configure per weekday (Mon–Fri only) the daily target (default 07:36, informational) and the daily unpaid break window (default 13:00–14:00, can be turned off per day) from the popup's **Settings** link. Defaults: Mon–Thu 08:00 / 17:00, Fri 08:00 / 14:00. Times use the computer's local timezone, and reminders only fire while Chrome is running. They remind only, they never clock for you. The break window is deducted from each day's worked time in the weekly summary (if a break was clocked out/in that day, the real gap is used instead). The summary also shows each day's target and the difference (worked − target). The **Week** row shows the total worked, the weekly target and the difference (negative = hours still to do). The weekly target is the average of the configured daily targets times the working days: on a normal week each day keeps its own target, but when a day is off (MyEra reports an `absences` entry or a public holiday, shown as "Absent"/"Holiday") the average is spread over the remaining days, so e.g. a 38h week (7h36 average) with a Friday holiday becomes 4 × 7h36 = 30h24.
+4. Press **Clock in** / **Clock out**. **Clear** removes the saved user and password.
 
 Credentials are stored in `chrome.storage.local` (this browser only, unencrypted) and are only sent to `hcs.eratime.eu`. Nothing goes to any other server.
+
+## Popup
+
+- **Clock in / Clock out**: only the button that makes sense is enabled, based on today's last clocking.
+- **Summary table**: for each working day (Mon–Fri) it shows the time worked, the target and the difference (worked − target). The last row totals the period; a negative difference means hours still to do.
+- **Week / Month**: the toggle switches the period. The arrows go back in time (up to one year, never into the future) and **Today** jumps back to the current period.
+
+## Settings
+
+Open them from the popup's **Settings** link. Everything is configured per weekday (Mon–Fri):
+
+| Setting | Meaning | Default |
+|---|---|---|
+| Active | Send reminders that day | on |
+| Clock in / Clock out | When the reminder fires | Mon–Thu 08:00 / 17:00, Fri 08:00 / 14:00 |
+| Lunch break | Unpaid window deducted from the worked time (can be switched off per day) | 13:00–14:00 |
+| Daily target | Hours to complete that day | 07:36 |
+
+Reminders are notifications (click one to open the popup). They only fire while Chrome is running, use the computer's local timezone and never clock for you.
+
+### How worked time is computed
+
+Worked time is the sum of the in → out intervals of the day, minus the overlap with the lunch break window. If you already clocked out/in during the day, that real gap is used instead and the configured window is ignored. An interval still open today only counts up to now, so a lunch break that hasn't started yet is not deducted.
+
+### Example: a "normal" day
+
+Daily target 07:36 and a 30 min lunch break from 13:00 to 13:30:
+
+| | |
+|---|---|
+| Clock in | 08:00 |
+| Clock out | 16:06 |
+| Lunch break (deducted) | 13:00–13:30 → 30m |
+| **Worked** | 8h 06m − 30m = **7h 36m** |
+| Target | 7h 36m |
+| **Diff** | **+0h 00m** |
+
+Clocking out later adds to the difference (out at 17:00 → 8h 30m worked, +0h 54m); leaving earlier subtracts from it. To mirror this setup, set the lunch break to 13:00–13:30 in Settings (the default is a 1 h break).
+
+### Example: different targets per day
+
+Mon–Thu with a 1 h lunch break and a shorter Friday without one:
+
+| Day | In | Out | Lunch break | Worked | Target | Diff |
+|---|---|---|---|---|---|---|
+| Mon–Thu | 08:00 | 17:00 | 13:00–14:00 (1h) | 9h − 1h = 8h 00m | 8h 00m | +0h 00m |
+| Fri | 08:00 | 14:00 | off | 6h 00m | 6h 00m | +0h 00m |
+
+The week adds up to 4 × 8h + 6h = **38h**. In Settings this is: Mon–Thu clock in 08:00, clock out 17:00, lunch break on 13:00–14:00, daily target 08:00; Fri clock in 08:00, clock out 14:00, lunch break off, daily target 06:00.
+
+### Weekly and monthly target
+
+The target of a period is the sum of the daily targets of its working days: five days of 07:36 make a 38h week.
+
+When a day is off (MyEra reports an absence or a public holiday, shown as "Absent" / "Holiday") its target is 0 and the weekly average is spread over the remaining days, so the week doesn't go over. For example, a 38h week (7h36 average) with a Friday holiday becomes 4 × 7h36 = 30h24.
+
+In the month view this is applied week by week, and the target only counts days up to today, so mid-month you aren't shown hours that are not due yet.

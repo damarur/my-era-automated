@@ -11,10 +11,10 @@ function render(settings) {
     tr.dataset.day = d;
     tr.innerHTML = `
       <td>${DAY_NAMES[d]}</td>
-      <td><input type="checkbox" class="en" ${cfg.enabled ? "checked" : ""}></td>
+      <td class="c"><input type="checkbox" class="en" ${cfg.enabled ? "checked" : ""}></td>
       <td><input type="time" class="in" value="${cfg.in}"></td>
       <td><input type="time" class="out" value="${cfg.out}"></td>
-      <td><input type="checkbox" class="bon" ${cfg.breakEnabled ? "checked" : ""}></td>
+      <td class="c"><input type="checkbox" class="bon" ${cfg.breakEnabled ? "checked" : ""}></td>
       <td><input type="time" class="bs" value="${cfg.breakStart}"></td>
       <td><input type="time" class="be" value="${cfg.breakEnd}"></td>
       <td><input type="time" class="tg" value="${cfg.target}"></td>`;
@@ -40,7 +40,8 @@ function collect() {
 
 const minutes = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
 
-function flash(msg) {
+function flash(msg, warn) {
+  $("status").className = warn ? "warn" : "";
   $("status").textContent = msg;
   setTimeout(() => ($("status").textContent = ""), 4000);
 }
@@ -52,7 +53,7 @@ $("save").addEventListener("click", async () => {
     const c = settings.days[d];
     return c.breakEnabled && minutes(c.breakEnd) - minutes(c.breakStart) < 30;
   });
-  flash(short.length ? `Saved. Warning: break under 30 min on ${short.map((d) => DAY_NAMES[d]).join(", ")}` : "Saved");
+  flash(short.length ? `Saved. Warning: break under 30 min on ${short.map((d) => DAY_NAMES[d]).join(", ")}` : "Saved", short.length > 0);
 });
 $("reset").addEventListener("click", async () => {
   await chrome.storage.local.remove("settings");
@@ -61,3 +62,14 @@ $("reset").addEventListener("click", async () => {
 });
 
 getSettings().then(render);
+
+// Grey out the inputs of days/breaks that are switched off.
+function syncRow(tr) {
+  const on = tr.querySelector(".en").checked;
+  const bon = tr.querySelector(".bon").checked;
+  tr.classList.toggle("off", !on);
+  for (const c of ["in", "out"]) tr.querySelector("." + c).disabled = !on;
+  for (const c of ["bs", "be"]) tr.querySelector("." + c).disabled = !bon;
+}
+new MutationObserver(() => [...$("days").children].forEach(syncRow)).observe($("days"), { childList: true });
+$("days").addEventListener("change", (e) => syncRow(e.target.closest("tr")));

@@ -40,6 +40,20 @@
     tr.today td:nth-child(-n+3) { font-weight: 600; }
     tfoot td:first-child { width: auto; }
     tfoot td { border-top: 1px solid #ccc; font-weight: 600; padding-top: 4px; }
+    .nav { display: flex; align-items: center; gap: 4px; margin-top: 12px; }
+    .nav span { flex: 1; text-align: center; font-weight: 600; font-size: 12px; white-space: nowrap; }
+    .nav button { flex: none; padding: 4px 6px; font-size: 12px; background: #fff; color: #1a237e; border-color: #9fa8da; }
+    .nav button.active { background: #1a237e; color: #fff; }
+    .nav svg { width: 14px; height: 14px; }
+    .seg { display: flex; margin-left: 4px; }
+    .seg button:first-child { border-radius: 6px 0 0 6px; }
+    .seg button:last-child { border-radius: 0 6px 6px 0; margin-left: -1px; }
+    .scroll { max-height: 340px; overflow-y: auto; }
+    .scroll table { margin-top: 4px; }
+    thead th, tfoot td { position: sticky; background: #fff; }
+    thead th { top: 0; }
+    tfoot td { bottom: 0; }
+    tr.monday:not(:first-child) td { border-top: 1px solid #eee; }
     .warn { margin-top: 12px; padding: 8px 10px; font-size: 12px; color: #6d4c00; background: #fff8e1; border: 1px solid #ffc107; border-left-width: 4px; border-radius: 4px; }
   </style>
 </head>
@@ -67,10 +81,17 @@
         Clock out
       </button>
     </div>
-    <table id="week">
+    <div class="nav">
+      <button id="prev" class="icon" title="Previous"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <span id="periodLabel"></span>
+      <button id="next" class="icon" title="Next"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+      <button id="today" title="Back to current period">Today</button>
+      <div class="seg"><button id="weekBtn">Week</button><button id="monthBtn">Month</button></div>
+    </div>
+    <div class="scroll"><table id="week">
       <thead><tr><th>Day</th><th>Date</th><th>Worked</th><th>Target</th><th>Diff</th></tr></thead>
       <tbody></tbody>
-      <tfoot><tr><td colspan="2">Week</td><td id="weekTotal">–</td><td id="weekTarget">–</td><td id="weekDiff">–</td></tr></tfoot>
+      <tfoot><tr><td colspan="2" id="totalLabel">Week</td><td id="weekTotal">–</td><td id="weekTarget">–</td><td id="weekDiff">–</td></tr></tfoot>
     </table>
   </div>
 
