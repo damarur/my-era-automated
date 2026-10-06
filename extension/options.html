@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>MyEra Clock – Settings</title>
+  <style>
+    body { font: 14px system-ui, sans-serif; max-width: 520px; margin: 24px auto; }
+    table { border-collapse: collapse; margin: 12px 0; }
+    td, th { padding: 4px 12px 4px 0; text-align: left; }
+    button { padding: 8px 16px; margin-right: 8px; cursor: pointer; }
+    #status { color: #2e7d32; margin-left: 8px; }
+    small { color: #666; }
+  </style>
+</head>
+<body>
+  <h2>Reminders</h2>
+  <label><input type="checkbox" id="enabled"> Enable reminders</label>
+  <table>
+    <thead><tr><th>Day</th><th>Active</th><th>Clock in</th><th>Clock out</th></tr></thead>
+    <tbody id="days"></tbody>
+  </table>
+
+  <p><button id="save">Save</button><button id="reset">Reset to defaults</button><span id="status"></span></p>
+  <small>Times use your computer's local timezone. Reminders only fire while Chrome is running.</small>
+  <script src="settings.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

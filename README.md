@@ -46,3 +46,17 @@ Each run:
 ## Local testing
 
 `era-time.http` contains the same two requests for manual testing with an HTTP client (e.g. the IntelliJ/VS Code HTTP client). It is git-ignored since it's meant to hold your real credentials locally — never commit it.
+
+## Chrome extension
+
+`extension/` is a Manifest V3 Chrome extension that does the same clock in/out from a popup.
+
+1. Open `chrome://extensions`, enable **Developer mode**.
+2. **Load unpacked** → select the `extension/` folder.
+3. Click the extension icon, enter user code + password, press **Clock in** / **Clock out**.
+
+### Reminders
+
+A notification fires at the configured clock-in / clock-out times (click it to open the popup). Configure per weekday (Mon–Fri only) from the popup's **Reminder settings** link. Defaults: Mon–Thu 08:00 / 17:00, Fri 08:00 / 14:00. Times use the computer's local timezone, and reminders only fire while Chrome is running. They remind only, they never clock for you.
+
+Credentials are stored in `chrome.storage.local` (this browser only, unencrypted) and are only sent to `hcs.eratime.eu`. Nothing goes to any other server.

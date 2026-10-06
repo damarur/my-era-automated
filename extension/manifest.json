@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "MyEra Clock",
+  "version": "1.1.0",
+  "description": "Clock in / clock out on MyEra, with configurable reminders. Credentials stay in your browser.",
+  "permissions": ["storage", "alarms", "notifications"],
+  "host_permissions": ["https://hcs.eratime.eu/*"],
+  "icons": { "48": "icon48.png", "128": "icon128.png" },
+  "action": {
+    "default_title": "MyEra Clock",
+    "default_popup": "popup.html"
+  },
+  "background": { "service_worker": "background.js" },
+  "options_ui": { "page": "options.html", "open_in_tab": true }
+}
