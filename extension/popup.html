@@ -5,8 +5,23 @@
   <title>MyEra Clock</title>
   <style>
     body { font: 14px system-ui, sans-serif; width: 320px; margin: 12px; }
-    label { display: block; margin-bottom: 8px; }
-    input { width: 100%; box-sizing: border-box; padding: 6px; margin-top: 2px; }
+    .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+    .brand img { width: 40px; height: 40px; }
+    .brand b { display: block; font-size: 16px; }
+    .brand span { color: #6b7280; font-size: 12.5px; }
+    .field { display: block; margin-bottom: 12px; }
+    .field > span { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600; color: #4b5563; }
+    .field input { width: 100%; box-sizing: border-box; padding: 10px 12px; font: inherit; color: #1f2937; background: #fafbff; border: 1px solid #cfd4ea; border-radius: 8px; transition: border-color .15s, box-shadow .15s; }
+    .field input:focus { outline: none; border-color: #1a237e; box-shadow: 0 0 0 3px #e8eaf6; }
+    .pw { position: relative; }
+    .pw input { padding-right: 40px; }
+    .eye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); flex: none; padding: 6px; background: none; border: 0; color: #6b7280; }
+    .eye:hover { color: #1a237e; background: none; }
+    .eye .off { display: none; }
+    .eye.shown .on { display: none; }
+    .eye.shown .off { display: block; }
+    #loginError { margin: 0 0 12px; padding: 8px 10px; font-size: 13px; color: #b71c1c; background: #ffebee; border: 1px solid #ef9a9a; border-radius: 6px; }
+    #loginError:empty { display: none; }
     [hidden] { display: none !important; }
     svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
     .row { display: flex; gap: 8px; margin-top: 12px; }
@@ -58,16 +73,29 @@
   </style>
 </head>
 <body>
-  <div id="loginView">
-    <label>User code <input id="user" autocomplete="username"></label>
-    <label>Password <input id="pass" type="password" autocomplete="current-password"></label>
+  <form id="loginView">
+    <div class="brand">
+      <img src="icon48.png" alt="">
+      <div><b>MyEra Clock</b><span>Sign in with your MyEra account</span></div>
+    </div>
+    <label class="field"><span>User</span><input id="user" autocomplete="username" spellcheck="false"></label>
+    <label class="field"><span>Password</span>
+      <div class="pw">
+        <input id="pass" type="password" autocomplete="current-password">
+        <button type="button" class="eye" id="eye" title="Show password" aria-label="Show password">
+          <svg class="on" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg class="off" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+        </button>
+      </div>
+    </label>
+    <div id="loginError" role="alert"></div>
     <div class="row">
-      <button id="login">
+      <button type="submit" id="login">
         <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
         Login
       </button>
     </div>
-  </div>
+  </form>
 
   <div id="clockView" hidden>
     <div>Logged in as <b id="who"></b></div>
@@ -99,7 +127,7 @@
 
   <div class="row footer">
     <button id="open">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <svg viewBox="0 0 763 763" aria-hidden="true"><circle cx="381.5" cy="381.5" r="381.5" fill="#F9A606" stroke="none"/><path d="M255 20L381.5 381.5 708 578A381.5 381.5 0 0 0 255 20Z" fill="#FBBD36" stroke="none"/><g stroke="#D48C00" stroke-width="36" stroke-linecap="round" opacity=".85"><path d="M251 83 359 389M381 405 556 503"/></g><g stroke-width="36" stroke-linecap="round"><path d="M273 75 381.5 381.5" stroke="#fff"/><path d="M381.5 381.5 568 495" stroke="#DADADA"/></g><circle cx="381.5" cy="381.5" r="30" fill="#fff" opacity=".6" stroke="none"/><circle cx="381.5" cy="381.5" r="18" fill="#fff" stroke="none"/></svg>
       myEra
     </button>
     <a href="#" id="settings">
@@ -114,6 +142,7 @@
 
   <div class="warn">⚠️ Credentials are saved unencrypted, locally in this browser only.</div>
   <script src="settings.js"></script>
+  <script src="api.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

@@ -3,14 +3,15 @@
 <head>
   <meta charset="utf-8">
   <title>MyEra Clock – Settings</title>
+  <link rel="icon" href="icon48.png">
   <style>
     :root { --primary: #1a237e; --primary-soft: #e8eaf6; --border: #dfe3ee; --muted: #6b7280; --green: #2e7d32; --red: #c62828; }
     * { box-sizing: border-box; }
     body { font: 14px/1.4 system-ui, sans-serif; margin: 0; padding: 32px 16px; background: #f4f6fb; color: #1f2937; }
     .wrap { max-width: 860px; margin: 0 auto; }
     header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-    header .logo { width: 40px; height: 40px; border-radius: 10px; background: var(--primary); color: #fff; display: grid; place-items: center; }
-    header svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    header .logo { width: 40px; height: 40px; display: grid; place-items: center; }
+    header svg { width: 40px; height: 40px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     h1 { font-size: 20px; margin: 0; }
     header p { margin: 0; color: var(--muted); font-size: 13px; }
     .card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(26, 35, 126, .06); }
@@ -42,8 +43,15 @@
     button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     #save { background: var(--primary); color: #fff; }
     #save:hover { background: #121a63; }
-    #reset { background: #fff; color: var(--red); border-color: #ef9a9a; }
-    #reset:hover { background: #ffebee; }
+    .preset { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 0; border-top: 1px solid #eef0f6; flex-wrap: wrap; }
+    .preset:first-of-type { border-top: 0; padding-top: 0; }
+    .preset p { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; }
+    .preset .fields { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+    .apply { background: var(--primary-soft); color: var(--primary); border-color: #9fa8da; padding: 7px 14px; }
+    .apply:hover { background: #c5cae9; }
+    .alert { margin-bottom: 14px; padding: 10px 12px; font-size: 13px; color: #6d4c00; background: #fff8e1; border: 1px solid #ffc107; border-left-width: 4px; border-radius: 6px; }
+    .stack { display: flex; flex-direction: column; gap: 10px; }
+    .switch input:disabled + span { opacity: .4; }
     #status { font-weight: 600; color: var(--green); }
     #status.warn { color: #b26a00; }
   </style>
@@ -51,13 +59,34 @@
 <body>
   <div class="wrap">
     <header>
-      <div class="logo"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+      <div class="logo"><svg viewBox="0 0 763 763" aria-hidden="true"><circle cx="381.5" cy="381.5" r="381.5" fill="#F9A606" stroke="none"/><path d="M255 20L381.5 381.5 708 578A381.5 381.5 0 0 0 255 20Z" fill="#FBBD36" stroke="none"/><g stroke="#D48C00" stroke-width="36" stroke-linecap="round" opacity=".85"><path d="M251 83 359 389M381 405 556 503"/></g><g stroke-width="36" stroke-linecap="round"><path d="M273 75 381.5 381.5" stroke="#fff"/><path d="M381.5 381.5 568 495" stroke="#DADADA"/></g><circle cx="381.5" cy="381.5" r="30" fill="#fff" opacity=".6" stroke="none"/><circle cx="381.5" cy="381.5" r="18" fill="#fff" stroke="none"/></svg></div>
       <div><h1>MyEra Clock</h1><p>Reminders, breaks and daily targets</p></div>
     </header>
 
     <div class="card">
       <label class="switch"><input type="checkbox" id="enabled"> Enable reminders</label>
       <p class="hint">Times use your computer's local timezone. Reminders only fire while Chrome is running.</p>
+    </div>
+
+    <div class="card">
+      <h2>Presets</h2>
+      <div class="preset">
+        <div><b>Standard 7h 36m</b><p>7h 36m per day from the start time, with the break below. Clock out is calculated.</p></div>
+        <div class="fields">
+          Start <input type="time" id="pStart" value="09:00">
+          Break <input type="time" id="pBs" value="13:00"> – <input type="time" id="pBe" value="13:30">
+          <button class="apply" id="applyStd">Apply to all days</button>
+        </div>
+      </div>
+      <div class="preset">
+        <div><b>Irregular schedule</b><p>8h Mon–Thu (start + 8h + break) and 6h on Fri without break (start + 6h).</p></div>
+        <div class="fields">
+          Start <input type="time" id="iStart" value="08:00">
+          Break (Mon–Thu) <input type="time" id="iBs" value="13:00"> – <input type="time" id="iBe" value="14:00">
+          <button class="apply" id="applyIrr">Apply</button>
+        </div>
+      </div>
+      <p class="hint">Applying a preset fills the weekly schedule below and saves it.</p>
     </div>
 
     <div class="card">
@@ -72,9 +101,18 @@
       <p class="hint">The break is unpaid and deducted from the daily worked time. If you already clocked out/in during the day, that gap is used instead. The minimum required break is 30 min; switch the break off for days without one. The daily target is only used to compare against the worked time in the summary.</p>
     </div>
 
+    <div class="card">
+      <h2>Auto clock</h2>
+      <div class="alert">⚠️ <b>Use at your own risk.</b> Auto clock clocks in and out on your behalf and <b>may not work</b> (Chrome closed or asleep, network or MyEra errors, API changes, wrong schedule). You are solely responsible for your recorded times, so always check MyEra.</div>
+      <div class="stack">
+        <label class="switch"><input type="checkbox" id="ack"> I understand the risks and accept full responsibility</label>
+        <label class="switch"><input type="checkbox" id="auto" disabled> Enable auto clock</label>
+      </div>
+      <p class="hint">Uses the clock in / out times of the weekly schedule (Mon–Fri) and replaces the reminders. You get a browser notification every time it clocks in or out, and also if it is skipped or fails, so you can step in. Right before acting it checks MyEra: it only clocks in if there is no clocking yet today, and only clocks out if you are clocked in. It skips absences and holidays, and never acts more than 10 min after the scheduled time. Chrome must be running.</p>
+    </div>
+
     <div class="actions">
       <button id="save"><svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>Save</button>
-      <button id="reset"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Reset to defaults</button>
       <span id="status"></span>
     </div>
   </div>

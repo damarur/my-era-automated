@@ -1,11 +1,4 @@
-const BASE = "https://hcs.eratime.eu/api/proxy";
 const $ = (id) => document.getElementById(id);
-
-const baseHeaders = {
-  "Content-Type": "application/x-www-form-urlencoded",
-  "hcs-application-key": "ERAATTENDANCE",
-  "hcs-customer-key": "lufthansa",
-};
 
 function setStatus(msg, ok) {
   const el = $("status");
@@ -13,35 +6,6 @@ function setStatus(msg, ok) {
   el.className = ok === undefined ? "" : ok ? "ok" : "err";
 }
 
-async function login(user, pass) {
-  const res = await fetch(`${BASE}/login`, {
-    method: "POST",
-    headers: { ...baseHeaders, "hcs-user": user, "hcs-pass": pass },
-  });
-  const token = res.headers.get("hcs-token");
-  if (!token) throw new Error(`Login failed (HTTP ${res.status})`);
-  return { token, refreshToken: res.headers.get("hcs-refresh-token") };
-}
-
-async function fetchUserInfo(user, token) {
-  const res = await fetch(`${BASE}/flt/myera/feature/user/info`, {
-    headers: { ...baseHeaders, "hcs-user-code": user, "hcs-token": token },
-  });
-  if (!res.ok) throw new Error(`User info failed (HTTP ${res.status})`);
-  const { data } = await res.json();
-  return { employeeCode: data.employee.code, fullName: data.name.full };
-}
-
-async function getSession() {
-  const { user, pass } = await chrome.storage.local.get(["user", "pass"]);
-  if (!user || !pass) return null;
-  const { token, refreshToken } = await login(user, pass);
-  if (refreshToken) await chrome.storage.local.set({ refreshToken });
-  return { user, token };
-}
-
-const pad = (n) => String(n).padStart(2, "0");
-const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const fmt = (ms) => `${Math.floor(ms / 3600000)}h ${pad(Math.floor((ms % 3600000) / 60000))}m`;
 const fmtSigned = (ms) => `${ms < 0 ? "−" : "+"}${fmt(Math.abs(ms))}`;
 const hmToMs = (t) => { const [h, m] = (t || "00:00").split(":").map(Number); return (h * 60 + m) * 60000; };
@@ -125,14 +89,9 @@ async function loadPeriod() {
     const first = new Date(start.getFullYear(), start.getMonth(), start.getDate() - ((start.getDay() + 6) % 7));
     const last = new Date(end.getFullYear(), end.getMonth(), end.getDate() - ((end.getDay() + 6) % 7) + 4);
     const fetchEnd = offset === 0 && ymd(now) > ymd(last) ? now : last; // weekend: still fetch today for the button state
-    const res = await fetch(
-      `${BASE}/flt/myera/feature/calendar/employees/${encodeURIComponent(employeeCode)}?DATE_START=${ymd(first)}&DATE_END=${ymd(fetchEnd)}`,
-      { headers: { ...baseHeaders, "hcs-user-code": session.user, "hcs-token": session.token } },
-    );
-    if (!res.ok) throw new Error(`Calendar failed (HTTP ${res.status})`);
-    const { data } = await res.json();
+    const calendar = await fetchCalendar(session, employeeCode, ymd(first), ymd(fetchEnd));
     if (id !== loadId) return;
-    const byDate = Object.fromEntries(data.calendar.map((d) => [d.date, d]));
+    const byDate = Object.fromEntries(calendar.map((d) => [d.date, d]));
 
     const today = ymd(now);
     if (offset === 0) {
@@ -216,6 +175,7 @@ function showView(user) {
   $("loginView").hidden = !!user;
   $("clockView").hidden = !user;
   $("clear").hidden = !user;
+  if (!user) $("loginError").textContent = "";
   clockState = null;
   updateClockButtons();
   if (user) {
@@ -243,7 +203,9 @@ function busy(b) {
 async function doLogin() {
   const user = $("user").value.trim();
   const pass = $("pass").value;
-  if (!user || !pass) return setStatus("Enter user and password", false);
+  const error = (msg) => { $("loginError").textContent = msg; };
+  error("");
+  if (!user || !pass) return error("Enter your user and password");
 
   busy(true);
   setStatus("Verifying...");
@@ -255,7 +217,8 @@ async function doLogin() {
     showView(fullName);
     setStatus("Credentials verified and saved", true);
   } catch (e) {
-    setStatus(e.message, false);
+    setStatus("");
+    error(e.message === "Failed to fetch" ? "Could not reach MyEra. Check your connection." : e.message);
   } finally {
     busy(false);
   }
@@ -267,11 +230,7 @@ async function clock(type) {
   try {
     const session = await getSession();
     if (!session) return showView(null);
-    const res = await fetch(`${BASE}/flt/myera/feature/clocking?TYPE=${type}`, {
-      method: "POST",
-      headers: { ...baseHeaders, "hcs-user-code": session.user, "hcs-token": session.token },
-    });
-    if (!res.ok) throw new Error(`Clocking failed (HTTP ${res.status})`);
+    await postClocking(session, type);
     const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     setStatus(`${type === 1 ? "Clocked in" : "Clocked out"} at ${time}`, true);
     loadPeriod();
@@ -298,7 +257,13 @@ $("monthBtn").addEventListener("click", () => setView("month"));
 $("today").addEventListener("click", () => { offset = 0; loadPeriod(); });
 $("prev").addEventListener("click", () => { offset--; loadPeriod(); });
 $("next").addEventListener("click", () => { if (offset < 0) { offset++; loadPeriod(); } });
-$("login").addEventListener("click", doLogin);
+$("loginView").addEventListener("submit", (e) => { e.preventDefault(); doLogin(); });
+$("eye").addEventListener("click", () => {
+  const show = $("pass").type === "password";
+  $("pass").type = show ? "text" : "password";
+  $("eye").classList.toggle("shown", show);
+  $("eye").title = $("eye").ariaLabel = show ? "Hide password" : "Show password";
+});
 $("clear").addEventListener("click", clearCredentials);
 $("in").addEventListener("click", () => clock(1));
 $("out").addEventListener("click", () => clock(2));

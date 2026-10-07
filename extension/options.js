@@ -4,6 +4,9 @@ const $ = (id) => document.getElementById(id);
 
 function render(settings) {
   $("enabled").checked = settings.remindersEnabled;
+  $("ack").checked = settings.autoClock.ack;
+  $("auto").checked = settings.autoClock.enabled;
+  syncAuto();
   $("days").innerHTML = "";
   for (const d of ORDER) {
     const cfg = settings.days[d];
@@ -35,10 +38,15 @@ function collect() {
       target: tr.querySelector(".tg").value || "00:00",
     };
   }
-  return { remindersEnabled: $("enabled").checked, days };
+  const ack = $("ack").checked;
+  return { remindersEnabled: $("enabled").checked, autoClock: { ack, enabled: ack && $("auto").checked }, days };
 }
 
-const minutes = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+function syncAuto() {
+  $("auto").disabled = !$("ack").checked;
+  if (!$("ack").checked) $("auto").checked = false;
+}
+$("ack").addEventListener("change", syncAuto);
 
 function flash(msg, warn) {
   $("status").className = warn ? "warn" : "";
@@ -46,19 +54,29 @@ function flash(msg, warn) {
   setTimeout(() => ($("status").textContent = ""), 4000);
 }
 
-$("save").addEventListener("click", async () => {
-  const settings = collect();
+async function save(settings = collect()) {
   await chrome.storage.local.set({ settings });
   const short = ORDER.filter((d) => {
     const c = settings.days[d];
-    return c.breakEnabled && minutes(c.breakEnd) - minutes(c.breakStart) < 30;
+    return c.breakEnabled && toMin(c.breakEnd) - toMin(c.breakStart) < 30;
   });
   flash(short.length ? `Saved. Warning: break under 30 min on ${short.map((d) => DAY_NAMES[d]).join(", ")}` : "Saved", short.length > 0);
+}
+$("save").addEventListener("click", () => save());
+
+// Presets overwrite the weekly schedule (keeping the other settings) and save right away.
+async function applyDays(days) {
+  const settings = { ...collect(), days };
+  render(settings);
+  await save(settings);
+}
+$("applyStd").addEventListener("click", () => {
+  if (!$("pStart").value || !$("pBs").value || !$("pBe").value) return flash("Fill start and break times", true);
+  applyDays(standardPreset({ start: $("pStart").value, breakStart: $("pBs").value, breakEnd: $("pBe").value }));
 });
-$("reset").addEventListener("click", async () => {
-  await chrome.storage.local.remove("settings");
-  render(await getSettings());
-  flash("Reset");
+$("applyIrr").addEventListener("click", () => {
+  if (!$("iStart").value || !$("iBs").value || !$("iBe").value) return flash("Fill start and break times", true);
+  applyDays(irregularPreset({ start: $("iStart").value, breakStart: $("iBs").value, breakEnd: $("iBe").value }));
 });
 
 getSettings().then(render);

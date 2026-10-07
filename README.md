@@ -1,6 +1,6 @@
 # my-era-automated
 
-A Chrome extension to clock in/out on [MyEra](https://hcs.eratime.eu), with weekday reminders and a weekly/monthly hours summary.
+A Chrome extension to clock in/out on [MyEra](https://hcs.eratime.eu), with weekday reminders, optional auto clock, and a weekly/monthly hours summary.
 
 ## Install
 
@@ -8,7 +8,7 @@ A Chrome extension to clock in/out on [MyEra](https://hcs.eratime.eu), with week
 
 1. Open `chrome://extensions` and enable **Developer mode**.
 2. **Load unpacked** → select the `extension/` folder.
-3. Click the extension icon, enter user code + password and press **Login**. It only verifies them against MyEra and saves them if valid.
+3. Click the extension icon, enter your **User** and password (the eye icon shows/hides what you typed) and press **Login** or Enter. It only verifies them against MyEra and saves them if valid; if the login fails, the error is shown above the button.
 4. Press **Clock in** / **Clock out**. **Clear** removes the saved user and password.
 
 Credentials are stored in `chrome.storage.local` (this browser only, unencrypted) and are only sent to `hcs.eratime.eu`. Nothing goes to any other server.
@@ -31,6 +31,27 @@ Open them from the popup's **Settings** link. Everything is configured per weekd
 | Daily target | Hours to complete that day | Mon–Thu 08:00, Fri 06:00 |
 
 Reminders are notifications (click one to open the popup). They only fire while Chrome is running, use the computer's local timezone and never clock for you.
+
+### Presets
+
+At the top of Settings, two presets fill the weekly schedule and save it:
+
+- **Standard 7h 36m**: every day 7h 36m from a start time (default 09:00) with an editable break (default 13:00–13:30), applied to all days. Clock out is calculated (start + 7h 36m + break, i.e. 17:06 by default).
+- **Irregular schedule**: 8h Mon–Thu (start + 8h + break) and 6h on Fri without break (start + 6h). Start (default 08:00) and the Mon–Thu break (default 13:00–14:00) are editable, giving 08:00–17:00 Mon–Thu and 08:00–14:00 Fri by default. This is also the initial default.
+
+### Auto clock
+
+> ⚠️ **Use at your own risk.** Auto clock clocks in and out on your behalf and may not work (Chrome closed or asleep, network/MyEra errors, API changes, wrong schedule). You are responsible for your recorded times, so always check MyEra.
+
+Off by default. To enable it you must tick the acceptance checkbox first. It uses the clock in / out times of the weekly schedule (Mon–Fri) and replaces the reminders. Right before acting it asks MyEra for today's clockings:
+
+- **Clock in** only if there is no clocking yet today.
+- **Clock out** only if the last clocking is a clock in.
+- Skips days with an absence or public holiday.
+- Never acts more than 10 minutes after the scheduled time (e.g. Chrome was closed); it notifies you instead.
+- After clocking it re-checks MyEra and shows a browser notification with the result (done / not confirmed / failed). You also get a notification when it skips or fails (these stay on screen until dismissed) so you can step in.
+
+It needs Chrome running and the credentials saved in the extension.
 
 ### How worked time is computed
 
