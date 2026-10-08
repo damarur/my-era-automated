@@ -11,24 +11,25 @@ const fmtSigned = (ms) => `${ms < 0 ? "−" : "+"}${fmt(Math.abs(ms))}`;
 const hmToMs = (t) => { const [h, m] = (t || "00:00").split(":").map(Number); return (h * 60 + m) * 60000; };
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-// Effective time = sum of in->out intervals minus the overlap with the configured unpaid break
-// window. If the day already has a clocked break (out followed by in), the configured window
-// is ignored. An interval still open today only counts up to now, so a break that has not
-// started yet is not deducted.
+// Effective time = sum of the time blocks between consecutive clockings, minus the overlap with
+// the configured lunch break window. Every pair of consecutive clockings is a valid block
+// (in->out, but also in->in and out->out, since MyEra allows repeated clockings of the same
+// type), except out->in, which is a break. If the day already has a clocked break, the
+// configured window is ignored. A block still open today (last clocking is an "in") only counts
+// up to now, so a break that has not started yet is not deducted.
 function effectiveMs(clockings, key, isToday, cfg) {
   const intervals = [];
-  let openAt = null, clockedBreak = false;
+  let clockedBreak = false;
+  let prev = null;
   for (const c of clockings) {
-    const t = new Date(c.time).getTime();
-    if (c.in) {
-      if (openAt === null && intervals.length) clockedBreak = true;
-      openAt = t;
-    } else if (openAt !== null) {
-      intervals.push([openAt, t]);
-      openAt = null;
+    const cur = { in: c.in, t: new Date(c.time).getTime() };
+    if (prev) {
+      if (!prev.in && cur.in) clockedBreak = clockedBreak || intervals.length > 0;
+      else intervals.push([prev.t, cur.t]);
     }
+    prev = cur;
   }
-  if (openAt !== null && isToday) intervals.push([openAt, Date.now()]);
+  if (prev && prev.in && isToday) intervals.push([prev.t, Date.now()]);
 
   const deduct = cfg.breakEnabled && !clockedBreak;
   const bs = new Date(`${key}T${cfg.breakStart}`).getTime();

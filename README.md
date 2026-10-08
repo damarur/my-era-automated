@@ -55,7 +55,7 @@ It needs Chrome running and the credentials saved in the extension.
 
 ### How worked time is computed
 
-Worked time is the sum of the in → out intervals of the day, minus the overlap with the lunch break window. If you already clocked out/in during the day, that real gap is used instead and the configured window is ignored. An interval still open today only counts up to now, so a lunch break that hasn't started yet is not deducted.
+Worked time is the sum of the time blocks between consecutive clockings of the day, minus the overlap with the lunch break window. MyEra allows two clock-ins or two clock-outs in a row, so every pair of consecutive clockings counts as one valid block (in → out, in → in and out → out); only out → in is a break. For example, in 08:00, in 09:00, out 17:00 is a single block of 9h, and in 08:00, out 16:00, out 17:00 also counts 9h. If you already clocked out/in during the day, that real gap is used instead and the configured window is ignored. An interval still open today only counts up to now, so a lunch break that hasn't started yet is not deducted.
 
 ### Example: a "normal" day
 
