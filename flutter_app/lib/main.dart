@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'api.dart';
 import 'scheduler.dart';
+import 'theme_controller.dart';
 import 'screens/login_screen.dart';
 import 'screens/shell.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await ThemeController.instance.load();
   runApp(const MyEraApp());
   // Don't block the first frame on notification permission / WorkManager setup.
   initScheduler().catchError((Object e) => debugPrint('Scheduler init failed: $e'));
@@ -18,12 +20,16 @@ class MyEraApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const seed = Color(0xFF05164D); // dark navy
-    return MaterialApp(
-      title: 'MyEra Clock',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(colorSchemeSeed: seed, useMaterial3: true),
-      darkTheme: ThemeData(colorSchemeSeed: seed, useMaterial3: true, brightness: Brightness.dark),
-      home: const _Root(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: ThemeController.instance,
+      builder: (context, mode, _) => MaterialApp(
+        title: 'MyEra Clock',
+        debugShowCheckedModeBanner: false,
+        themeMode: mode,
+        theme: ThemeData(colorSchemeSeed: seed, useMaterial3: true),
+        darkTheme: ThemeData(colorSchemeSeed: seed, useMaterial3: true, brightness: Brightness.dark),
+        home: const _Root(),
+      ),
     );
   }
 }
