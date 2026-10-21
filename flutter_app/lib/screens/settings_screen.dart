@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../scheduler.dart';
 import '../settings.dart';
+import '../theme_controller.dart';
 import 'common.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -121,6 +122,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : ListView(
               children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: ValueListenableBuilder<ThemeMode>(
+                    valueListenable: ThemeController.instance,
+                    builder: (context, mode, _) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Theme'),
+                        const SizedBox(height: 8),
+                        SegmentedButton<ThemeMode>(
+                          showSelectedIcon: false,
+                          segments: const [
+                            ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.brightness_auto), label: Text('System')),
+                            ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode), label: Text('Light')),
+                            ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode), label: Text('Dark')),
+                          ],
+                          selected: {mode},
+                          onSelectionChanged: (v) => ThemeController.instance.set(v.first),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const Divider(),
                 SwitchListTile(
                   title: const Text('Clock reminders'),
                   subtitle: const Text('Notification at each scheduled clock in/out'),
