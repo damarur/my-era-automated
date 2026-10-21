@@ -37,7 +37,7 @@ class Clocking {
 
 /// One day of the calendar endpoint (absences, clockings, schedule, holiday).
 class CalendarDay {
-  CalendarDay(this.date, this.clockings, this.absences, this.scheduleLabel, this.holiday, this.notes, this.absenceShort, this.absenceColor);
+  CalendarDay(this.date, this.clockings, this.absences, this.scheduleLabel, this.holiday, this.notes, this.absenceShort, this.absenceColor, this.anomalies, this.absenceLabels);
 
   final String date;
   final List<Clocking> clockings;
@@ -47,6 +47,8 @@ class CalendarDay {
   final List<String> notes;
   final String? absenceShort;
   final String? absenceColor; // hex RRGGBB
+  final List<String> anomalies; // "incidencias" of the day (labels)
+  final List<String> absenceLabels; // absence type labels, e.g. "U-Vacaciones"
 
   bool get off => absences.isNotEmpty || holiday;
 
@@ -68,6 +70,8 @@ class CalendarDay {
       ((j['notes'] as List?) ?? []).map((n) => n is Map ? (n['text'] ?? n['description'] ?? '').toString() : n.toString()).toList(),
       firstAbsence?['shortLabel'] as String?,
       firstAbsence?['color']?['background'] as String?,
+      ((j['anomalies'] as List?) ?? []).map((x) => (x is Map ? (x['label'] ?? '') : x).toString()).where((x) => x.isNotEmpty).toList(),
+      ((j['absences'] as List?) ?? []).map((x) => (x['absence']?['label'] ?? '').toString()).where((x) => x.isNotEmpty).toList(),
     );
   }
 }
@@ -99,6 +103,7 @@ class RequestItem {
     required this.to,
     required this.requested,
     this.remark,
+    this.fromCalendar = false,
   });
   final String code;
   final bool allowDelete;
@@ -109,6 +114,9 @@ class RequestItem {
   final String? to;
   final String requested;
   final String? remark;
+
+  /// True for absences taken from the calendar that have no request behind them.
+  final bool fromCalendar;
 }
 
 /// Absence type available for new requests (`requests/absence/items`).
@@ -134,7 +142,8 @@ class AbsenceType {
 }
 
 class RegistrationRow {
-  RegistrationRow(this.date, this.columns, this.anomaly, this.holiday);
+  RegistrationRow(this.date, this.columns, this.anomaly, this.holiday, this.unapproved);
+  final bool unapproved;
   final String date;
   final List<String> columns;
   final bool anomaly;
@@ -266,6 +275,7 @@ class MyEraApi {
         ((m['columns'] as List?) ?? []).map((c) => (c['label'] ?? '').toString()).toList(),
         m['anomaly'] == true,
         (m['publicHoliday'] as Map?)?['enabled'] == true,
+        m['unapproved'] == true,
       );
     }).toList();
     return Registrations(
@@ -275,26 +285,92 @@ class MyEraApi {
     );
   }
 
+  /// Every request of the current year (by the date of the act, newest first): the requests list
+  /// with all states and types, plus the calendar absences that have no request behind them
+  /// (e.g. vacations loaded before the requests existed in MyEra).
   Future<List<RequestItem>> requests() async {
     final s = await session();
-    final j = await _getJson(s, '/requests/list');
+    final year = DateTime.now().year;
+    final opts = await _getJson(s, '/requests/data/options');
+    final filters = [
+      for (final f in ((opts['data']?['filters'] as List?) ?? []))
+        {'code': f['code'], 'values': [for (final v in (f['values'] as List? ?? [])) v['code']]},
+    ];
+    final j = await _getJson(s, '/requests/list', {if (filters.isNotEmpty) 'filter': jsonEncode(filters)});
     final out = <RequestItem>[];
     for (final g in ((j['data']['groups'] as List?) ?? [])) {
       for (final r in ((g['requests'] as List?) ?? [])) {
+        final from = (r['date'] ?? '').toString();
+        final to = r['dateEnd']?.toString() ?? from;
+        // Keep the requests that touch the current year.
+        if (from.compareTo('$year-01-01') < 0 && to.compareTo('$year-01-01') < 0) continue;
+        if (from.compareTo('$year-12-31') > 0) continue;
         out.add(RequestItem(
           code: (r['code'] ?? '').toString(),
           allowDelete: r['allowDelete'] == true,
           type: (r['type']?['label'] ?? '').toString(),
           status: (r['status']?['label'] ?? '').toString(),
           description: (r['description'] ?? '').toString(),
-          from: (r['date'] ?? '').toString(),
+          from: from,
           to: r['dateEnd']?.toString(),
           requested: (r['requested'] ?? '').toString(),
           remark: r['remark']?.toString(),
         ));
       }
     }
-    out.sort((a, b) => b.requested.compareTo(a.requested));
+
+    // Absence days from the calendar not covered by a request of the same absence type.
+    final covered = <String>{};
+    for (final r in out) {
+      if (r.type != 'ausencia') continue;
+      for (var d = DateTime.parse(r.from); !d.isAfter(DateTime.parse(r.to ?? r.from)); d = DateTime(d.year, d.month, d.day + 1)) {
+        covered.add('${ymd(d)}|${r.description}');
+      }
+    }
+    final days = await calendar(DateTime(year, 1, 1), DateTime(year, 12, 31));
+    final loose = <String, List<DateTime>>{}; // label -> days
+    for (final d in days) {
+      for (final label in d.absenceLabels) {
+        if (!covered.contains('${d.date}|$label')) (loose[label] ??= []).add(DateTime.parse(d.date));
+      }
+    }
+    bool onlyWeekendBetween(DateTime a, DateTime b) {
+      for (var d = DateTime(a.year, a.month, a.day + 1); d.isBefore(b); d = DateTime(d.year, d.month, d.day + 1)) {
+        if (d.weekday < 6) return false;
+      }
+      return true;
+    }
+
+    loose.forEach((label, ds) {
+      ds.sort();
+      var start = ds.first, end = ds.first;
+      void flush() => out.add(RequestItem(
+            code: '',
+            allowDelete: false,
+            type: 'ausencia',
+            status: 'registrada',
+            description: label,
+            from: ymd(start),
+            to: end == start ? null : ymd(end),
+            requested: '',
+            fromCalendar: true,
+          ));
+      for (final d in ds.skip(1)) {
+        if (onlyWeekendBetween(end, d)) {
+          end = d;
+        } else {
+          flush();
+          start = end = d;
+        }
+      }
+      flush();
+    });
+
+    // Newest event first (by the start date of the act, then by its end).
+    out.sort((x, y) {
+      final c = y.from.compareTo(x.from);
+      return c != 0 ? c : (y.to ?? y.from).compareTo(x.to ?? x.from);
+    });
     return out;
   }
 

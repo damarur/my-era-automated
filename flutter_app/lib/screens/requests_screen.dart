@@ -4,7 +4,8 @@ import '../api.dart';
 import 'common.dart';
 import 'new_request.dart';
 
-/// Personal requests list, with new absence / clocking requests and withdrawing pending ones.
+/// Requests of the current year (newest event first), with new absence / clocking requests and
+/// withdrawing pending ones. Absences without a request behind them come from the calendar.
 class RequestsScreen extends StatefulWidget {
   const RequestsScreen({super.key});
 
@@ -92,7 +93,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(r.status, style: TextStyle(fontWeight: FontWeight.w600, color: _statusColor(r.status, cs))),
-                    Text(r.allowDelete ? 'hold to withdraw' : _dmy(r.requested), style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                    Text(r.allowDelete ? 'hold to withdraw' : (r.requested.isEmpty ? 'from calendar' : _dmy(r.requested)), style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
                   ],
                 ),
               );
@@ -107,6 +108,7 @@ class _RequestsScreenState extends State<RequestsScreen> {
     final s = status.toLowerCase();
     if (s.contains('deneg')) return cs.error;
     if (s.contains('autoriz')) return Colors.green.shade600;
+    if (s.contains('registr')) return cs.onSurfaceVariant;
     return cs.onSurfaceVariant;
   }
 }

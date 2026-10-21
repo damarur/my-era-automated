@@ -4,7 +4,6 @@ import '../api.dart';
 import '../scheduler.dart';
 import 'home_screen.dart';
 import 'messages_screen.dart';
-import 'planning_screen.dart';
 import 'registrations_screen.dart';
 import 'requests_screen.dart';
 import 'settings_screen.dart';
@@ -42,7 +41,6 @@ class _ShellState extends State<Shell> {
       HomeScreen(key: ValueKey('home$_refresh'), onClocked: () => setState(() => _refresh++)),
       SummaryScreen(key: ValueKey('sum$_refresh')),
       RegistrationsScreen(key: ValueKey('reg$_refresh')),
-      PlanningScreen(key: ValueKey('plan$_refresh')),
       const RequestsScreen(),
     ];
     return Scaffold(
@@ -70,7 +68,6 @@ class _ShellState extends State<Shell> {
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.bar_chart_outlined), selectedIcon: Icon(Icons.bar_chart), label: 'Summary'),
           NavigationDestination(icon: Icon(Icons.list_alt_outlined), selectedIcon: Icon(Icons.list_alt), label: 'Fichajes'),
-          NavigationDestination(icon: Icon(Icons.calendar_month_outlined), selectedIcon: Icon(Icons.calendar_month), label: 'Planning'),
           NavigationDestination(icon: Icon(Icons.assignment_outlined), selectedIcon: Icon(Icons.assignment), label: 'Requests'),
         ],
       ),
