@@ -91,7 +91,7 @@ Future<void> reschedule() async {
       await _notifications.zonedSchedule(
         id: id++,
         title: e.type == 'in' ? 'Time to clock in' : 'Time to clock out',
-        body: 'Open MyEra Clock.',
+        body: 'Open MyEra.',
         scheduledDate: tz.TZDateTime.fromMillisecondsSinceEpoch(tz.UTC, e.when.millisecondsSinceEpoch),
         notificationDetails: _details,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,

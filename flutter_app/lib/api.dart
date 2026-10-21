@@ -10,8 +10,10 @@ const featureBase = '$apiBase/flt/myera/feature';
 const _baseHeaders = {
   'Content-Type': 'application/x-www-form-urlencoded',
   'hcs-application-key': 'ERAATTENDANCE',
-  'hcs-customer-key': 'lufthansa',
 };
+
+/// Customer key used by accounts saved before the login screen asked for it.
+const defaultCustomer = 'lufthansa';
 
 String pad(int n) => n.toString().padLeft(2, '0');
 String ymd(DateTime d) => '${d.year}-${pad(d.month)}-${pad(d.day)}';
@@ -24,7 +26,8 @@ class ApiException implements Exception {
 }
 
 class Session {
-  Session(this.user, this.token);
+  Session(this.customer, this.user, this.token);
+  final String customer;
   final String user;
   final String token;
 }
@@ -165,7 +168,7 @@ class MyEraApi {
   Session? _cached;
   DateTime? _cachedAt;
 
-  Map<String, String> _auth(Session s) => {..._baseHeaders, 'hcs-user-code': s.user, 'hcs-token': s.token};
+  Map<String, String> _auth(Session s) => {..._baseHeaders, 'hcs-customer-key': s.customer, 'hcs-user-code': s.user, 'hcs-token': s.token};
 
   Future<Map<String, dynamic>> _getJson(Session s, String path, [Map<String, String>? query]) async {
     final uri = Uri.parse('$featureBase$path').replace(queryParameters: query);
@@ -196,24 +199,25 @@ class MyEraApi {
 
   // --- auth ----------------------------------------------------------------
 
-  Future<Session> _login(String user, String pass) async {
+  Future<Session> _login(String customer, String user, String pass) async {
     final res = await http.post(
       Uri.parse('$apiBase/login'),
-      headers: {..._baseHeaders, 'hcs-user': user, 'hcs-pass': pass},
+      headers: {..._baseHeaders, 'hcs-customer-key': customer, 'hcs-user': user, 'hcs-pass': pass},
     );
     final token = res.headers['hcs-token'];
     if (token == null || token.isEmpty) {
-      throw ApiException('Login failed (HTTP ${res.statusCode}). Check your user and password.');
+      throw ApiException('Login failed (HTTP ${res.statusCode}). Check your customer key, user and password.');
     }
-    return Session(user, token);
+    return Session(customer, user, token);
   }
 
   /// Verifies the credentials, stores them securely and caches the employee info.
-  Future<String> loginAndSave(String user, String pass) async {
-    final s = await _login(user, pass);
+  Future<String> loginAndSave(String customer, String user, String pass) async {
+    final s = await _login(customer, user, pass);
     final info = await _getJson(s, '/user/info');
     final data = info['data'] as Map<String, dynamic>;
     final prefs = await SharedPreferences.getInstance();
+    await _secure.write(key: 'customer', value: customer);
     await _secure.write(key: 'user', value: user);
     await _secure.write(key: 'pass', value: pass);
     await prefs.setString('employeeCode', data['employee']['code'] as String);
@@ -230,7 +234,8 @@ class MyEraApi {
     final user = await _secure.read(key: 'user');
     final pass = await _secure.read(key: 'pass');
     if (user == null || pass == null) throw ApiException('Missing session, please log in again');
-    _cached = await _login(user, pass);
+    final customer = await _secure.read(key: 'customer') ?? defaultCustomer;
+    _cached = await _login(customer, user, pass);
     _cachedAt = DateTime.now();
     return _cached!;
   }

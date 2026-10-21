@@ -52,6 +52,10 @@ android {
 
     buildTypes {
         release {
+            // R8 renames/strips parts of the plugins (NoSuchMethodError in shared_preferences_android),
+            // so release builds are left unminified.
+            isMinifyEnabled = false
+            isShrinkResources = false
             // Signed with the release key when key.properties exists, with debug keys otherwise
             // (so `flutter run --release` keeps working locally).
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")

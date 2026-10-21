@@ -45,7 +45,7 @@ class _ShellState extends State<Shell> {
     ];
     return Scaffold(
       appBar: AppBar(
-        title: Text(_name.isEmpty ? 'MyEra Clock' : _name, overflow: TextOverflow.ellipsis),
+        title: Text(_name.isEmpty ? 'MyEra' : _name, overflow: TextOverflow.ellipsis),
         actions: [
           IconButton(
             icon: const Icon(Icons.mail_outline),

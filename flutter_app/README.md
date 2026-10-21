@@ -1,4 +1,4 @@
-# MyEra Clock (Android, Flutter)
+# MyEra (Android, Flutter)
 
 Android app for MyEra (`hcs.eratime.eu`, customer `lufthansa`), same API the web app and the Chrome extension use.
 

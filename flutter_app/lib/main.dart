@@ -23,7 +23,7 @@ class MyEraApp extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: ThemeController.instance,
       builder: (context, mode, _) => MaterialApp(
-        title: 'MyEra Clock',
+        title: 'MyEra',
         debugShowCheckedModeBanner: false,
         themeMode: mode,
         theme: ThemeData(colorSchemeSeed: seed, useMaterial3: true),

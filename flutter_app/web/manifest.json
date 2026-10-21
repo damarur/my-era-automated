@@ -1,11 +1,11 @@
 {
-    "name": "myera_clock",
-    "short_name": "myera_clock",
+    "name": "MyEra",
+    "short_name": "MyEra",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FFFFFF",
+    "theme_color": "#FFA800",
+    "description": "Clock in/out on MyEra.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

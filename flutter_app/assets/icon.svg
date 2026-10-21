@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="1024" height="1024">
+  <!-- Vector redraw of extension/icon128.png. Render with: node tool/render_icon.js -->
+  <defs>
+    <clipPath id="disc"><circle cx="64" cy="64" r="64"/></clipPath>
+  </defs>
+  <g clip-path="url(#disc)">
+    <rect width="128" height="128" fill="#F9A606"/>
+    <polygon points="37.7,-10 140,-10 140,111 64,64" fill="#FBBD36"/>
+    <g stroke="#D98F00" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none" transform="translate(-3 2.2)">
+      <polyline points="45.5,12 64,64 95.3,83.3"/>
+    </g>
+    <path d="M64 64 L95.3 83.3" stroke="#DADADA" stroke-width="6" stroke-linecap="round" fill="none"/>
+    <path d="M64 64 L45.5 12" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" fill="none"/>
+    <circle cx="64" cy="64" r="3" fill="#FFFFFF"/>
+  </g>
+</svg>

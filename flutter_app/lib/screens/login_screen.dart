@@ -12,6 +12,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _customer = TextEditingController();
   final _user = TextEditingController();
   final _pass = TextEditingController();
   bool _busy = false;
@@ -19,15 +20,16 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _error;
 
   Future<void> _submit() async {
+    final customer = _customer.text.trim().toLowerCase();
     final user = _user.text.trim();
     final pass = _pass.text;
-    if (user.isEmpty || pass.isEmpty) return setState(() => _error = 'Enter your user and password');
+    if (customer.isEmpty || user.isEmpty || pass.isEmpty) return setState(() => _error = 'Enter your customer key, user and password');
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      await MyEraApi.instance.loginAndSave(user, pass);
+      await MyEraApi.instance.loginAndSave(customer, user, pass);
       _pass.clear();
       await reschedule().catchError((Object _) {});
       widget.onLoggedIn();
@@ -53,12 +55,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Icon(Icons.schedule, size: 56, color: cs.primary),
+                    Image.asset('assets/icon.png', width: 72, height: 72),
                     const SizedBox(height: 12),
-                    Text('MyEra Clock', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall),
+                    Text('MyEra', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall),
                     const SizedBox(height: 4),
-                    Text('Customer: lufthansa', textAlign: TextAlign.center, style: TextStyle(color: cs.onSurfaceVariant)),
                     const SizedBox(height: 28),
+                    TextField(
+                      controller: _customer,
+                      textInputAction: TextInputAction.next,
+                      autocorrect: false,
+                      decoration: const InputDecoration(labelText: 'Customer key', border: OutlineInputBorder()),
+                    ),
+                    const SizedBox(height: 12),
                     TextField(
                       controller: _user,
                       autofillHints: const [AutofillHints.username],
@@ -105,6 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    _customer.dispose();
     _user.dispose();
     _pass.dispose();
     super.dispose();
