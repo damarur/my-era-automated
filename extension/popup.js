@@ -14,24 +14,24 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // Effective time = sum of the time blocks between consecutive clockings, minus the overlap with
 // the configured lunch break window. Every pair of consecutive clockings is a valid block
 // (in->out, but also in->in and out->out, since MyEra allows repeated clockings of the same
-// type), except out->in, which is a break. If the day already has a clocked break, the
-// configured window is ignored. A block still open today (last clocking is an "in") only counts
-// up to now, so a break that has not started yet is not deducted.
+// type), except out->in, which is a break. The configured window is always deducted from the
+// worked blocks, even when the day also has a clocked break elsewhere (a clocked break that
+// overlaps the window is not deducted twice, since it is already outside the blocks). A block
+// still open today (last clocking is an "in") only counts up to now, so a break that has not
+// started yet is not deducted.
 function effectiveMs(clockings, key, isToday, cfg) {
   const intervals = [];
-  let clockedBreak = false;
   let prev = null;
   for (const c of clockings) {
     const cur = { in: c.in, t: new Date(c.time).getTime() };
     if (prev) {
-      if (!prev.in && cur.in) clockedBreak = clockedBreak || intervals.length > 0;
-      else intervals.push([prev.t, cur.t]);
+      if (prev.in || !cur.in) intervals.push([prev.t, cur.t]);
     }
     prev = cur;
   }
   if (prev && prev.in && isToday) intervals.push([prev.t, Date.now()]);
 
-  const deduct = cfg.breakEnabled && !clockedBreak;
+  const deduct = cfg.breakEnabled;
   const bs = new Date(`${key}T${cfg.breakStart}`).getTime();
   const be = new Date(`${key}T${cfg.breakEnd}`).getTime();
   let total = 0;
