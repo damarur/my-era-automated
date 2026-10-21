@@ -54,10 +54,13 @@ class DayRow {
 }
 
 class PeriodSummary {
-  PeriodSummary(this.rows, this.total, this.target);
+  PeriodSummary(this.rows, this.total, this.target, this.fullTarget);
   final List<DayRow> rows;
   final int total;
+  /// Target of the days due so far (past days and today); the whole period when it is over.
   final int target;
+  /// Target of every working day of the period, including the days still to come.
+  final int fullTarget;
 }
 
 /// Monday of the week containing [d].
@@ -87,7 +90,7 @@ Future<PeriodSummary> buildSummary(AppSettings settings, bool month, int offset,
 
   final today = ymd(now);
   final rows = <DayRow>[];
-  var total = 0, totalTarget = 0;
+  var total = 0, totalTarget = 0, fullTarget = 0;
   for (var w = first; !w.isAfter(last); w = DateTime(w.year, w.month, w.day + 7)) {
     final days = <({DateTime d, String key, DayConfig cfg, CalendarDay? entry, String? off})>[];
     for (var i = 0; i < 5; i++) {
@@ -107,10 +110,11 @@ Future<PeriodSummary> buildSummary(AppSettings settings, bool month, int offset,
       final open = clockings.isNotEmpty && clockings.last.isIn;
       final pending = x.key.compareTo(today) > 0 || (x.key == today && (open || clockings.isEmpty));
       total += ms;
+      fullTarget += target;
       // The week view keeps the full weekly target; in the month view days not due yet are left out.
       totalTarget += month && x.key.compareTo(today) > 0 ? 0 : target;
       rows.add(DayRow(date: x.d, key: x.key, clockings: clockings, off: x.off, target: target, ms: ms, pending: pending));
     }
   }
-  return PeriodSummary(rows, total, totalTarget);
+  return PeriodSummary(rows, total, totalTarget, fullTarget);
 }
