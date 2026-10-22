@@ -1,0 +1,366 @@
+{
+  "@@locale": "en",
+  "retry": "Retry",
+  "today": "Today",
+  "cancel": "Cancel",
+  "save": "Save",
+  "close": "Close",
+  "send": "Send",
+  "apply": "Apply",
+  "none": "None",
+  "navHome": "Home",
+  "navSummary": "Summary",
+  "navRequests": "Requests",
+  "navCounters": "Counters",
+  "navSettings": "Settings",
+  "messages": "Messages",
+  "logOut": "Log out",
+  "loginUnreachable": "Could not reach MyEra. Check your connection.",
+  "loginEnterAll": "Enter your customer key, user and password",
+  "customerKey": "Customer key",
+  "user": "User",
+  "password": "Password",
+  "showPassword": "Show password",
+  "hidePassword": "Hide password",
+  "logIn": "Log in",
+  "loginNote": "Credentials are stored encrypted on this device and only sent to MyEra.",
+  "clockIn": "Clock in",
+  "clockOut": "Clock out",
+  "clockedInAt": "Clocked in at {time}",
+  "@clockedInAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "clockedOutAt": "Clocked out at {time}",
+  "@clockedOutAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "newRequest": "New request",
+  "worked": "Worked",
+  "target": "Target",
+  "lunch": "Lunch",
+  "edited": "edited",
+  "noClockings": "No clockings",
+  "noClockingsYet": "No clockings yet",
+  "nowLabel": "now",
+  "breakDuration": "break {duration}",
+  "@breakDuration": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "absent": "Absent",
+  "holiday": "Holiday",
+  "absentInitial": "A",
+  "holidayInitial": "H",
+  "noTargetToday": "No target today",
+  "lunchBreakOn": "Lunch break · {day}",
+  "@lunchBreakOn": {
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "lunchOnlyThisDay": "Only for this day. Your weekly settings stay as they are.",
+  "fromTime": "From {time}",
+  "@fromTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "toTime": "To {time}",
+  "@toTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "endAfterStart": "The end must be after the start.",
+  "resetToSettings": "Reset to settings",
+  "week": "Week",
+  "month": "Month",
+  "exportPdf": "Export month as PDF",
+  "stillLoading": "Still loading, try again in a moment",
+  "pdfError": "Could not create the PDF: {error}",
+  "@pdfError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ofTargetThisWeek": "of {target} this week",
+  "@ofTargetThisWeek": {
+    "placeholders": {
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "monthTarget": "Month target",
+  "stillToWork": "Still to work",
+  "monthFootnote": "Target counts the days up to today. Small figures per day: worked above, target below.",
+  "overMonthTarget": "Over the month target",
+  "settingsAppearance": "Appearance",
+  "themeSystem": "System",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "settingsLanguage": "Language",
+  "languageSystem": "System",
+  "settingsClocking": "Clocking",
+  "clockReminders": "Clock reminders",
+  "clockRemindersSub": "Notification at each scheduled clock in/out",
+  "autoClock": "Auto clock",
+  "autoClockSub": "Clock in/out automatically at the scheduled times",
+  "weeklySchedule": "Weekly schedule",
+  "tapToChange": "Tap a time to change it",
+  "presetStandard": "Standard 7h 36m",
+  "presetIrregular": "Irregular",
+  "presetStandardTitle": "Standard 7h 36m",
+  "presetIrregularTitle": "Irregular schedule",
+  "presetStandardDesc": "7h 36m per day from the start time, with the break below. Clock out is calculated.",
+  "presetIrregularDesc": "8h Mon–Thu (start + 8h + break) and 6h on Fri without break (start + 6h).",
+  "start": "Start",
+  "breakFrom": "Break from",
+  "breakTo": "Break to",
+  "autoClockWarning": "The app will clock in and out for you at the scheduled times, even when it is closed. Android may delay or skip it (battery saver, device asleep). It re-checks MyEra first and never doubles a clocking, but you stay responsible for your clockings. Keep checking them.",
+  "iUnderstand": "I understand",
+  "savedOk": "Saved",
+  "savedWarnShortBreak": "Saved. Warning: break under 30 min on {days}",
+  "@savedWarnShortBreak": {
+    "placeholders": {
+      "days": {
+        "type": "String"
+      }
+    }
+  },
+  "inLabel": "Clock in",
+  "outLabel": "Clock out",
+  "lunchBreak": "Lunch break",
+  "netTime": "{duration} net",
+  "@netTime": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "scheduleFootnote": "The lunch break is unpaid and deducted from the daily worked time. The minimum required break is 30 min; switch it off for days without one. The target is only used to compare against the worked time in the summary.",
+  "fromLabel": "From",
+  "toLabel": "To",
+  "noRequestsYear": "No requests in {year}",
+  "@noRequestsYear": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "absenceRequest": "Absence request",
+  "clockingRequest": "Clocking request",
+  "withdrawTitle": "Withdraw request?",
+  "withdraw": "Withdraw",
+  "holdToWithdraw": "hold to withdraw",
+  "fromCalendar": "from calendar",
+  "newShort": "New",
+  "requestCancellation": "Request cancellation",
+  "holdToCancel": "hold to request cancellation",
+  "cancelNotAvailable": "This absence cannot be cancelled from the app.",
+  "cancellationRequested": "Cancellation requested",
+  "cancelAbsenceNote": "A cancellation request will be sent to MyEra. The absence stays until it is approved.",
+  "absenceToCancel": "Absence",
+  "chooseAbsence": "Choose the absence to cancel",
+  "chooseType": "Choose an absence type",
+  "chooseDate": "Choose a date",
+  "endBeforeStart": "End date is before start date",
+  "chooseHours": "Choose the hours",
+  "remarkRequired": "A remark is required for this type",
+  "needsAttachment": "This type needs an attachment, which the app does not support yet. Use the web app.",
+  "sendRequestTitle": "Send request?",
+  "requestSent": "Request sent",
+  "typeLabel": "Type",
+  "fullDay": "Full day",
+  "firstPart": "1st part",
+  "secondPart": "2nd part",
+  "hours": "Hours",
+  "startDate": "Start date",
+  "dateLabel": "Date",
+  "endDateOptional": "End date (optional)",
+  "firstPartSuffix": "(first part)",
+  "secondPartSuffix": "(second part)",
+  "remark": "Remark",
+  "remarkRequiredLabel": "Remark (required)",
+  "sendRequest": "Send request",
+  "chooseDateStartEnd": "Choose date, start and end",
+  "endAfterStartShort": "End must be after start",
+  "clockingSummary": "Clocking {date}\n{from} – {to}",
+  "@clockingSummary": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "noCounters": "No counters",
+  "noMessages": "No messages",
+  "markAllRead": "Mark all as read",
+  "markUnread": "Mark as unread",
+  "messageTitle": "Message",
+  "errHttp": "HTTP {code} on {path}",
+  "@errHttp": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "errHttpCode": "HTTP {code}",
+  "@errHttpCode": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "errMissingSession": "Missing session, please log in again",
+  "errLogin": "Login failed (HTTP {code}). Check your customer key, user and password.",
+  "@errLogin": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "errClocking": "Clocking failed (HTTP {code})",
+  "@errClocking": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "errRequest": "Request failed (HTTP {code}{detail})",
+  "@errRequest": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      },
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "errDelete": "Delete failed (HTTP {code})",
+  "@errDelete": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "notifChannelName": "Clock reminders",
+  "notifChannelDesc": "Clock in/out reminders and auto clock results",
+  "notifTimeToClockIn": "Time to clock in",
+  "notifTimeToClockOut": "Time to clock out",
+  "notifOpenApp": "Open MyEra.",
+  "autoInSkipped": "Auto clock in skipped",
+  "autoOutSkipped": "Auto clock out skipped",
+  "autoMissedBody": "Missed by {minutes} min (device was asleep). Please clock manually.",
+  "@autoMissedBody": {
+    "placeholders": {
+      "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "autoAbsenceBody": "Today is an absence or holiday.",
+  "autoAlreadyClocking": "There is already a clocking today.",
+  "autoNoOpenIn": "There is no open clock in (already clocked out, or never clocked in).",
+  "autoInDone": "Auto clock in done",
+  "autoOutDone": "Auto clock out done",
+  "autoInUnconfirmed": "Auto clock in sent, not confirmed",
+  "autoOutUnconfirmed": "Auto clock out sent, not confirmed",
+  "autoDoneInBody": "Clocked in at {time}.",
+  "@autoDoneInBody": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "autoDoneOutBody": "Clocked out at {time}.",
+  "@autoDoneOutBody": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "autoUnconfirmedBody": "Could not confirm it in MyEra. Please check manually.",
+  "autoInFailed": "Auto clock in failed",
+  "autoOutFailed": "Auto clock out failed",
+  "autoFailedBody": "{error}. Please clock manually.",
+  "@autoFailedBody": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pdfTitle": "Time report - {month} {year}",
+  "@pdfTitle": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "pdfDay": "Day",
+  "pdfClockings": "Clockings",
+  "pdfBreaks": "Breaks",
+  "pdfDiff": "Diff",
+  "pdfWeek": "Week",
+  "pdfExpectedSoFar": "Expected so far",
+  "pdfExpected": "Expected",
+  "pdfDifference": "Difference",
+  "pdfOverTarget": "Over the target",
+  "pdfNoClockOut": "no clock-out",
+  "pdfFootnote": "Worked = time between clockings minus the lunch break. Weekly targets follow the configured daily targets; on weeks with an absence or holiday the weekly average is spread over the remaining days.",
+  "pdfLunchEdited": " * Lunch break changed manually for that day.",
+  "pdfPage": "Page {page} / {total}",
+  "@pdfPage": {
+    "placeholders": {
+      "page": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  }
+}

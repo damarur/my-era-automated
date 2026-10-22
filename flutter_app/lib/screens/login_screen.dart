@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../l10n.dart';
 import '../scheduler.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -23,7 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final customer = _customer.text.trim().toLowerCase();
     final user = _user.text.trim();
     final pass = _pass.text;
-    if (customer.isEmpty || user.isEmpty || pass.isEmpty) return setState(() => _error = 'Enter your customer key, user and password');
+    if (customer.isEmpty || user.isEmpty || pass.isEmpty) return setState(() => _error = L10n.current.loginEnterAll);
     setState(() {
       _busy = true;
       _error = null;
@@ -34,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await reschedule().catchError((Object _) {});
       widget.onLoggedIn();
     } catch (e) {
-      setState(() => _error = e.toString().contains('SocketException') ? 'Could not reach MyEra. Check your connection.' : e.toString());
+      setState(() => _error = e.toString().contains('SocketException') ? L10n.current.loginUnreachable : e.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -64,14 +65,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       controller: _customer,
                       textInputAction: TextInputAction.next,
                       autocorrect: false,
-                      decoration: const InputDecoration(labelText: 'Customer key', border: OutlineInputBorder()),
+                      decoration: InputDecoration(labelText: context.l10n.customerKey, border: const OutlineInputBorder()),
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: _user,
                       autofillHints: const [AutofillHints.username],
                       textInputAction: TextInputAction.next,
-                      decoration: const InputDecoration(labelText: 'User', border: OutlineInputBorder()),
+                      decoration: InputDecoration(labelText: context.l10n.user, border: const OutlineInputBorder()),
                     ),
                     const SizedBox(height: 12),
                     TextField(
@@ -80,11 +81,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       autofillHints: const [AutofillHints.password],
                       onSubmitted: (_) => _submit(),
                       decoration: InputDecoration(
-                        labelText: 'Password',
+                        labelText: context.l10n.password,
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
                           icon: Icon(_show ? Icons.visibility_off : Icons.visibility),
-                          tooltip: _show ? 'Hide password' : 'Show password',
+                          tooltip: _show ? context.l10n.hidePassword : context.l10n.showPassword,
                           onPressed: () => setState(() => _show = !_show),
                         ),
                       ),
@@ -93,11 +94,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 20),
                     FilledButton(
                       onPressed: _busy ? null : _submit,
-                      child: _busy ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Log in'),
+                      child: _busy ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) : Text(context.l10n.logIn),
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Credentials are stored encrypted on this device and only sent to MyEra.',
+                      context.l10n.loginNote,
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                     ),

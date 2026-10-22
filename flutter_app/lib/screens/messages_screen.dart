@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../l10n.dart';
 import 'common.dart';
 
 class MessagesScreen extends StatefulWidget {
@@ -27,14 +28,14 @@ class _MessagesScreenState extends State<MessagesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Messages'),
-        actions: [IconButton(icon: const Icon(Icons.done_all), tooltip: 'Mark all as read', onPressed: () => _run(MyEraApi.instance.readAllMessages))],
+        title: Text(context.l10n.messages),
+        actions: [IconButton(icon: const Icon(Icons.done_all), tooltip: context.l10n.markAllRead, onPressed: () => _run(MyEraApi.instance.readAllMessages))],
       ),
       body: AsyncBody<List<Message>>(
         key: _body,
         loader: MyEraApi.instance.messages,
         builder: (context, items) {
-          if (items.isEmpty) return ListView(children: const [SizedBox(height: 80), Center(child: Text('No messages'))]);
+          if (items.isEmpty) return ListView(children: [const SizedBox(height: 80), Center(child: Text(context.l10n.noMessages))]);
           return ListView.separated(
             itemCount: items.length,
             separatorBuilder: (_, _) => const Divider(height: 1),
@@ -48,15 +49,15 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   showDialog<void>(
                     context: context,
                     builder: (_) => AlertDialog(
-                      title: Text(m.title.isEmpty ? 'Message' : m.title),
+                      title: Text(m.title.isEmpty ? context.l10n.messageTitle : m.title),
                       content: SingleChildScrollView(child: Text(m.body)),
-                      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+                      actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.l10n.close))],
                     ),
                   );
                   if (!m.read && m.id.isNotEmpty) _run(() => MyEraApi.instance.setMessageRead(m.id, true));
                 },
                 trailing: m.read && m.id.isNotEmpty
-                    ? IconButton(icon: const Icon(Icons.mark_email_unread_outlined), tooltip: 'Mark as unread', onPressed: () => _run(() => MyEraApi.instance.setMessageRead(m.id, false)))
+                    ? IconButton(icon: const Icon(Icons.mark_email_unread_outlined), tooltip: context.l10n.markUnread, onPressed: () => _run(() => MyEraApi.instance.setMessageRead(m.id, false)))
                     : null,
               );
             },

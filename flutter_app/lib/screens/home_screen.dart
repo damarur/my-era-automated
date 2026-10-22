@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../l10n.dart';
 import '../settings.dart';
-import '../summary.dart';
 import 'common.dart';
+import 'day_detail.dart';
+import 'requests_screen.dart';
 
 class _HomeData {
-  _HomeData(this.today, this.counters, this.settings);
+  _HomeData(this.today, this.settings);
   final CalendarDay? today;
-  final List<Counter> counters;
   final AppSettings settings;
 }
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.onClocked});
+  const HomeScreen({super.key, required this.onClocked, required this.onRequestCreated});
   final VoidCallback onClocked;
+  final VoidCallback onRequestCreated;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -27,9 +29,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<_HomeData> _load() async {
     final api = MyEraApi.instance;
     final now = DateTime.now();
-    final results = await Future.wait<Object?>([api.calendar(now, now), api.counters(), AppSettings.load()]);
+    final results = await Future.wait<Object?>([api.calendar(now, now), AppSettings.load()]);
     final days = results[0] as List<CalendarDay>;
-    return _HomeData(days.where((d) => d.date == ymd(now)).firstOrNull, results[1] as List<Counter>, results[2] as AppSettings);
+    return _HomeData(days.where((d) => d.date == ymd(now)).firstOrNull, results[1] as AppSettings);
   }
 
   Future<void> _clock(int type) async {
@@ -39,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
       await MyEraApi.instance.clock(type);
       if (!mounted) return;
       final t = TimeOfDay.now().format(context);
-      messenger.showSnackBar(SnackBar(content: Text('${type == 1 ? 'Clocked in' : 'Clocked out'} at $t')));
+      messenger.showSnackBar(SnackBar(content: Text(type == 1 ? context.l10n.clockedInAt(t) : context.l10n.clockedOutAt(t))));
       widget.onClocked();
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.toString())));
@@ -57,14 +59,13 @@ class _HomeScreenState extends State<HomeScreen> {
         final clockings = data.today?.clockings ?? const <Clocking>[];
         final isIn = clockings.isNotEmpty && clockings.last.isIn;
         final now = DateTime.now();
-        final cfg = data.settings.days[now.weekday];
-        final worked = cfg == null ? 0 : effectiveMs(clockings, ymd(now), true, cfg, now);
+        final cfg = data.settings.days[now.weekday] == null ? null : data.settings.configFor(now);
         final target = data.today?.off == true ? 0 : (cfg?.targetMs ?? 0);
         final cs = Theme.of(context).colorScheme;
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Text('${dayNames[now.weekday - 1]} ${pad(now.day)}/${pad(now.month)}', style: Theme.of(context).textTheme.headlineSmall),
+            Text('${weekdayShort(now.weekday)} ${pad(now.day)}/${pad(now.month)}', style: Theme.of(context).textTheme.headlineSmall),
             Text(
               [if (data.today?.scheduleLabel != null) data.today!.scheduleLabel!, ...?data.today?.absences].join(' · '),
               style: TextStyle(color: cs.onSurfaceVariant),
@@ -76,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: FilledButton.icon(
                     onPressed: _busy || isIn ? null : () => _clock(1),
                     icon: const Icon(Icons.login),
-                    label: const Text('Clock in'),
+                    label: Text(context.l10n.clockIn),
                     style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
                   ),
                 ),
@@ -85,68 +86,40 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: FilledButton.tonalIcon(
                     onPressed: _busy || !isIn ? null : () => _clock(2),
                     icon: const Icon(Icons.logout),
-                    label: const Text('Clock out'),
+                    label: Text(context.l10n.clockOut),
                     style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Today', style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    if (clockings.isEmpty) const Text('No clockings yet') else Wrap(spacing: 8, runSpacing: 4, children: [for (final c in clockings) _ClockChip(c)]),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Worked ${fmtDuration(worked)}'),
-                        Text('Target ${fmtDuration(target)}'),
-                        Text(
-                          fmtSigned(worked - target),
-                          style: TextStyle(fontWeight: FontWeight.w600, color: diffColor(context, pending: isIn || clockings.isEmpty, ok: worked >= target)),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () async {
+                if (await startNewRequest(context)) widget.onRequestCreated();
+              },
+              icon: const Icon(Icons.add),
+              label: Text(context.l10n.newRequest),
+              style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
             ),
-            const SizedBox(height: 16),
-            Text('Counters', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 4),
-            Card(
-              child: Column(
-                children: [
-                  for (final c in data.counters)
-                    ListTile(dense: true, title: Text(c.label), trailing: Text('${_num(c.value)} ${c.unit}', style: const TextStyle(fontWeight: FontWeight.w600))),
-                ],
+            if (cfg != null)
+              DayDetailCard(
+                date: now,
+                clockings: clockings,
+                cfg: cfg,
+                target: target,
+                off: data.today?.off == true ? (data.today!.absences.isNotEmpty ? 'Absent' : 'Holiday') : null,
+                absenceLabels: data.today?.absenceLabels ?? const [],
+                anomalies: data.today?.anomalies ?? const [],
+                title: context.l10n.today,
+                baseCfg: data.settings.days[now.weekday],
+                lunchEdited: data.settings.hasLunchOverride(now),
+                onLunchChanged: widget.onClocked,
               ),
-            ),
           ],
         );
       },
     );
   }
 
-  String _num(num? v) => v == null ? '–' : (v == v.roundToDouble() ? v.toInt().toString() : v.toString());
-}
-
-class _ClockChip extends StatelessWidget {
-  const _ClockChip(this.c);
-  final Clocking c;
-
-  @override
-  Widget build(BuildContext context) {
-    return Chip(
-      avatar: Icon(c.isIn ? Icons.login : Icons.logout, size: 16),
-      label: Text('${pad(c.time.hour)}:${pad(c.time.minute)}'),
-      visualDensity: VisualDensity.compact,
-    );
-  }
 }

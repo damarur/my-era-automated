@@ -5,6 +5,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:workmanager/workmanager.dart';
 
 import 'api.dart';
+import 'l10n.dart';
 import 'settings.dart';
 
 const _autoMaxLate = Duration(minutes: 10); // never auto clock long after the scheduled time
@@ -23,19 +24,19 @@ Future<void> _initNotifications() async {
   _notifReady = true;
 }
 
-const _details = NotificationDetails(
-  android: AndroidNotificationDetails(
-    'myera_clock',
-    'Clock reminders',
-    channelDescription: 'Clock in/out reminders and auto clock results',
-    importance: Importance.high,
-    priority: Priority.high,
-  ),
-);
+NotificationDetails _details() => NotificationDetails(
+      android: AndroidNotificationDetails(
+        'myera_clock',
+        L10n.current.notifChannelName,
+        channelDescription: L10n.current.notifChannelDesc,
+        importance: Importance.high,
+        priority: Priority.high,
+      ),
+    );
 
 Future<void> _notify(int id, String title, String body) async {
   await _initNotifications();
-  await _notifications.show(id: id, title: title, body: body, notificationDetails: _details);
+  await _notifications.show(id: id, title: title, body: body, notificationDetails: _details());
 }
 
 class ScheduledEvent {
@@ -90,10 +91,10 @@ Future<void> reschedule() async {
     for (final e in events.take(20)) {
       await _notifications.zonedSchedule(
         id: id++,
-        title: e.type == 'in' ? 'Time to clock in' : 'Time to clock out',
-        body: 'Open MyEra.',
+        title: e.type == 'in' ? L10n.current.notifTimeToClockIn : L10n.current.notifTimeToClockOut,
+        body: L10n.current.notifOpenApp,
         scheduledDate: tz.TZDateTime.fromMillisecondsSinceEpoch(tz.UTC, e.when.millisecondsSinceEpoch),
-        notificationDetails: _details,
+        notificationDetails: _details(),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       );
     }
@@ -103,10 +104,12 @@ Future<void> reschedule() async {
 /// Auto clock: re-checks the real state in MyEra right before acting, so it never doubles a
 /// clocking. "in" only when there are no clockings today; "out" only when the last one is an "in".
 Future<void> autoClock(String type, Duration late) async {
-  final label = type == 'in' ? 'clock in' : 'clock out';
+  final l = L10n.current;
+  final isIn = type == 'in';
   const id = 1000;
+  final skipped = isIn ? l.autoInSkipped : l.autoOutSkipped;
   if (late > _autoMaxLate) {
-    return await _notify(id, 'Auto $label skipped', 'Missed by ${late.inMinutes} min (device was asleep). Please clock manually.');
+    return await _notify(id, skipped, l.autoMissedBody('${late.inMinutes}'));
   }
   try {
     final api = MyEraApi.instance;
@@ -117,25 +120,26 @@ Future<void> autoClock(String type, Duration late) async {
     }
 
     final before = await state();
-    if (before != null && before.off) return await _notify(id, 'Auto $label skipped', 'Today is an absence or holiday.');
+    if (before != null && before.off) return await _notify(id, skipped, l.autoAbsenceBody);
     final clockings = before?.clockings ?? const <Clocking>[];
-    if (type == 'in' && clockings.isNotEmpty) return await _notify(id, 'Auto clock in skipped', 'There is already a clocking today.');
-    if (type == 'out' && !(clockings.isNotEmpty && clockings.last.isIn)) {
-      return await _notify(id, 'Auto clock out skipped', 'There is no open clock in (already clocked out, or never clocked in).');
+    if (isIn && clockings.isNotEmpty) return await _notify(id, skipped, l.autoAlreadyClocking);
+    if (!isIn && !(clockings.isNotEmpty && clockings.last.isIn)) {
+      return await _notify(id, skipped, l.autoNoOpenIn);
     }
 
-    await api.clock(type == 'in' ? 1 : 2);
+    await api.clock(isIn ? 1 : 2);
 
     final after = (await state())?.clockings;
     final last = (after != null && after.isNotEmpty) ? after.last : null;
-    final confirmed = last != null && last.isIn == (type == 'in');
+    final confirmed = last != null && last.isIn == isIn;
+    final time = last == null ? '' : '${pad(last.time.hour)}:${pad(last.time.minute)}';
     await _notify(
       id,
-      confirmed ? 'Auto $label done' : 'Auto $label sent, not confirmed',
-      confirmed ? 'Clocked $type at ${pad(last.time.hour)}:${pad(last.time.minute)}.' : 'Could not confirm it in MyEra. Please check manually.',
+      confirmed ? (isIn ? l.autoInDone : l.autoOutDone) : (isIn ? l.autoInUnconfirmed : l.autoOutUnconfirmed),
+      confirmed ? (isIn ? l.autoDoneInBody(time) : l.autoDoneOutBody(time)) : l.autoUnconfirmedBody,
     );
   } catch (e) {
-    await _notify(id, 'Auto $label failed', '$e. Please clock manually.');
+    await _notify(id, isIn ? l.autoInFailed : l.autoOutFailed, l.autoFailedBody('$e'));
   }
 }
 
@@ -143,6 +147,7 @@ Future<void> autoClock(String type, Duration late) async {
 void callbackDispatcher() {
   Workmanager().executeTask((task, input) async {
     if (task == _autoTask && input != null) {
+      await L10n.init(); // background isolate: language of the app
       final when = DateTime.fromMillisecondsSinceEpoch(input['when'] as int);
       try {
         await autoClock(input['type'] as String, DateTime.now().difference(when));

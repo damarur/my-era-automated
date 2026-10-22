@@ -4,6 +4,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'l10n.dart';
+
 const apiBase = 'https://hcs.eratime.eu/api/proxy';
 const featureBase = '$apiBase/flt/myera/feature';
 
@@ -107,6 +109,7 @@ class RequestItem {
     required this.requested,
     this.remark,
     this.fromCalendar = false,
+    this.absenceCode,
   });
   final String code;
   final bool allowDelete;
@@ -120,6 +123,16 @@ class RequestItem {
 
   /// True for absences taken from the calendar that have no request behind them.
   final bool fromCalendar;
+
+  /// Code of the absence type of an absence request (used to match it when cancelling it).
+  final String? absenceCode;
+}
+
+/// An absence of a period that can be cancelled (`requests/deleteabsence/items`).
+class DeletableAbsence {
+  DeletableAbsence(this.code, this.label);
+  final String code;
+  final String label;
 }
 
 /// Absence type available for new requests (`requests/absence/items`).
@@ -160,12 +173,16 @@ class Registrations {
   final List<String?> totals;
 }
 
+/// Public holiday absences ("H-Festivo..."): not shown in the requests list.
+bool _isHolidayLabel(String label) => RegExp(r'^H\s*[-–]|festiv', caseSensitive: false).hasMatch(label.trim());
+
 class MyEraApi {
   MyEraApi._();
   static final MyEraApi instance = MyEraApi._();
 
   static const _secure = FlutterSecureStorage();
   Session? _cached;
+  Future<Session>? _loginInFlight;
   DateTime? _cachedAt;
 
   Map<String, String> _auth(Session s) => {..._baseHeaders, 'hcs-customer-key': s.customer, 'hcs-user-code': s.user, 'hcs-token': s.token};
@@ -173,7 +190,7 @@ class MyEraApi {
   Future<Map<String, dynamic>> _getJson(Session s, String path, [Map<String, String>? query]) async {
     final uri = Uri.parse('$featureBase$path').replace(queryParameters: query);
     final res = await http.get(uri, headers: _auth(s));
-    if (res.statusCode != 200) throw ApiException('HTTP ${res.statusCode} on $path');
+    if (res.statusCode != 200) throw ApiException(L10n.current.errHttp('${res.statusCode}', path));
     return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
   }
 
@@ -193,7 +210,7 @@ class MyEraApi {
 
   Future<String> get employeeCode async {
     final code = (await SharedPreferences.getInstance()).getString('employeeCode');
-    if (code == null) throw ApiException('Missing session, please log in again');
+    if (code == null) throw ApiException(L10n.current.errMissingSession);
     return code;
   }
 
@@ -206,7 +223,7 @@ class MyEraApi {
     );
     final token = res.headers['hcs-token'];
     if (token == null || token.isEmpty) {
-      throw ApiException('Login failed (HTTP ${res.statusCode}). Check your customer key, user and password.');
+      throw ApiException(L10n.current.errLogin('${res.statusCode}'));
     }
     return Session(customer, user, token);
   }
@@ -231,9 +248,14 @@ class MyEraApi {
   /// Logs in with the saved credentials (token reused for a few minutes).
   Future<Session> session() async {
     if (_cached != null && DateTime.now().difference(_cachedAt!) < const Duration(minutes: 5)) return _cached!;
+    // Screens load in parallel: share one login, since a new login revokes the previous token.
+    return _loginInFlight ??= _loginSaved().whenComplete(() => _loginInFlight = null);
+  }
+
+  Future<Session> _loginSaved() async {
     final user = await _secure.read(key: 'user');
     final pass = await _secure.read(key: 'pass');
-    if (user == null || pass == null) throw ApiException('Missing session, please log in again');
+    if (user == null || pass == null) throw ApiException(L10n.current.errMissingSession);
     final customer = await _secure.read(key: 'customer') ?? defaultCustomer;
     _cached = await _login(customer, user, pass);
     _cachedAt = DateTime.now();
@@ -256,7 +278,7 @@ class MyEraApi {
   Future<void> clock(int type) async {
     final s = await session();
     final res = await http.post(Uri.parse('$featureBase/clocking?TYPE=$type'), headers: _auth(s));
-    if (res.statusCode < 200 || res.statusCode >= 300) throw ApiException('Clocking failed (HTTP ${res.statusCode})');
+    if (res.statusCode < 200 || res.statusCode >= 300) throw ApiException(L10n.current.errClocking('${res.statusCode}'));
   }
 
   Future<List<Counter>> counters() async {
@@ -290,12 +312,12 @@ class MyEraApi {
     );
   }
 
-  /// Every request of the current year (by the date of the act, newest first): the requests list
+  /// Every request of [year] (default: the current one) (by the date of the act, newest first): the requests list
   /// with all states and types, plus the calendar absences that have no request behind them
   /// (e.g. vacations loaded before the requests existed in MyEra).
-  Future<List<RequestItem>> requests() async {
+  Future<List<RequestItem>> requests({int? year}) async {
     final s = await session();
-    final year = DateTime.now().year;
+    year ??= DateTime.now().year;
     final opts = await _getJson(s, '/requests/data/options');
     final filters = [
       for (final f in ((opts['data']?['filters'] as List?) ?? []))
@@ -305,9 +327,10 @@ class MyEraApi {
     final out = <RequestItem>[];
     for (final g in ((j['data']['groups'] as List?) ?? [])) {
       for (final r in ((g['requests'] as List?) ?? [])) {
+        if (_isHolidayLabel((r['description'] ?? '').toString())) continue;
         final from = (r['date'] ?? '').toString();
         final to = r['dateEnd']?.toString() ?? from;
-        // Keep the requests that touch the current year.
+        // Keep the requests that touch the year.
         if (from.compareTo('$year-01-01') < 0 && to.compareTo('$year-01-01') < 0) continue;
         if (from.compareTo('$year-12-31') > 0) continue;
         out.add(RequestItem(
@@ -320,6 +343,7 @@ class MyEraApi {
           to: r['dateEnd']?.toString(),
           requested: (r['requested'] ?? '').toString(),
           remark: r['remark']?.toString(),
+          absenceCode: (r['absence'] as Map?)?['code']?.toString(),
         ));
       }
     }
@@ -336,6 +360,7 @@ class MyEraApi {
     final loose = <String, List<DateTime>>{}; // label -> days
     for (final d in days) {
       for (final label in d.absenceLabels) {
+        if (_isHolidayLabel(label)) continue;
         if (!covered.contains('${d.date}|$label')) (loose[label] ??= []).add(DateTime.parse(d.date));
       }
     }
@@ -400,13 +425,13 @@ class MyEraApi {
   Future<void> setMessageRead(String id, bool read) async {
     final s = await session();
     final res = await http.put(Uri.parse('$featureBase/messages/$id/${read ? 'read' : 'unread'}'), headers: _auth(s));
-    if (res.statusCode >= 300) throw ApiException('HTTP ${res.statusCode}');
+    if (res.statusCode >= 300) throw ApiException(L10n.current.errHttpCode('${res.statusCode}'));
   }
 
   Future<void> readAllMessages() async {
     final s = await session();
     final res = await http.put(Uri.parse('$featureBase/messages/readall'), headers: _auth(s));
-    if (res.statusCode >= 300) throw ApiException('HTTP ${res.statusCode}');
+    if (res.statusCode >= 300) throw ApiException(L10n.current.errHttpCode('${res.statusCode}'));
   }
 
   // --- requests (create / delete) -----------------------------------------
@@ -438,7 +463,7 @@ class MyEraApi {
       try {
         detail = (jsonDecode(utf8.decode(res.bodyBytes)) as Map)['meta']?['status']?['name']?.toString() ?? '';
       } catch (_) {}
-      throw ApiException('Request failed (HTTP ${res.statusCode}${detail.isEmpty ? '' : ' $detail'})');
+      throw ApiException(L10n.current.errRequest('${res.statusCode}', detail.isEmpty ? '' : ' $detail'));
     }
   }
 
@@ -465,6 +490,28 @@ class MyEraApi {
     return _postForm(_codeUri('requests/absence', type.code), body);
   }
 
+  /// GET requests/deleteabsence/items: the absences of [start]..[end] that MyEra lets the employee
+  /// ask to cancel. Empty when none of them can be cancelled.
+  Future<List<DeletableAbsence>> deletableAbsences(DateTime start, DateTime end) async {
+    final s = await session();
+    final j = await _getJson(s, '/requests/deleteabsence/items', {'DATE_START': ymd(start), 'DATE_END': ymd(end)});
+    return [
+      for (final a in ((j['data']?['absences'] as List?) ?? []))
+        if (a is Map && a['code'] != null) DeletableAbsence(a['code'].toString(), (a['label'] ?? '').toString()),
+    ];
+  }
+
+  /// POST requests/deleteabsence/{code} (query parameters, like the MyEra web app): asks to cancel the
+  /// authorized absence [code] between [start] and [end]. The absence stays until it is approved.
+  Future<void> requestAbsenceCancellation(String code, DateTime start, DateTime end, {String? remark}) {
+    final query = <String, String>{
+      'DATE_START': ymd(start),
+      'DATE_END': ymd(end),
+      if (remark != null && remark.isNotEmpty) 'REMARK': remark,
+    };
+    return _postForm(_codeUri('requests/deleteabsence', code).replace(queryParameters: query), {});
+  }
+
   /// POST requests/clocking ("fichaje en reloj"): worked hours [hourStart]..[hourEnd] (HH:mm) on [date].
   Future<void> requestClocking(DateTime date, String hourStart, String hourEnd, {String? remark}) {
     return _postForm(Uri.parse('$featureBase/requests/clocking'), {
@@ -479,6 +526,6 @@ class MyEraApi {
   Future<void> deleteRequest(String code) async {
     final s = await session();
     final res = await http.delete(Uri.parse('$featureBase/requests/%7B$code%7D'), headers: _auth(s));
-    if (res.statusCode < 200 || res.statusCode >= 300) throw ApiException('Delete failed (HTTP ${res.statusCode})');
+    if (res.statusCode < 200 || res.statusCode >= 300) throw ApiException(L10n.current.errDelete('${res.statusCode}'));
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
+import '../l10n.dart';
 import 'common.dart';
 
 String _hm(TimeOfDay t) => '${pad(t.hour)}:${pad(t.minute)}';
@@ -9,11 +10,11 @@ Future<bool> _confirmSend(BuildContext context, String summary) async {
   return await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Send request?'),
+          title: Text(context.l10n.sendRequestTitle),
           content: Text(summary),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Send')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.l10n.cancel)),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.l10n.send)),
           ],
         ),
       ) ??
@@ -48,12 +49,12 @@ class _NewAbsenceScreenState extends State<NewAbsenceScreen> {
 
   String? _validate() {
     final t = _type;
-    if (t == null) return 'Choose an absence type';
-    if (_start == null) return 'Choose a date';
-    if (_part == 0 && t.allowFullday && _end != null && _end!.isBefore(_start!)) return 'End date is before start date';
-    if (_part == 3 && (_from == null || _to == null)) return 'Choose the hours';
-    if (t.needRemark && _remark.text.trim().isEmpty) return 'A remark is required for this type';
-    if (t.needFile) return 'This type needs an attachment, which the app does not support yet. Use the web app.';
+    if (t == null) return L10n.current.chooseType;
+    if (_start == null) return L10n.current.chooseDate;
+    if (_part == 0 && t.allowFullday && _end != null && _end!.isBefore(_start!)) return L10n.current.endBeforeStart;
+    if (_part == 3 && (_from == null || _to == null)) return L10n.current.chooseHours;
+    if (t.needRemark && _remark.text.trim().isEmpty) return L10n.current.remarkRequired;
+    if (t.needFile) return L10n.current.needsAttachment;
     return null;
   }
 
@@ -67,8 +68,9 @@ class _NewAbsenceScreenState extends State<NewAbsenceScreen> {
     final t = _type!;
     final fullDays = _part == 0 && t.allowFullday;
     final end = fullDays ? (_end ?? _start!) : _start!;
-    final summary = '${t.label}\n${ymd(_start!)}${end != _start ? ' – ${ymd(end)}' : ''}'
-        '${_part == 1 ? ' (first part)' : _part == 2 ? ' (second part)' : _part == 3 ? ' ${_hm(_from!)}-${_hm(_to!)}' : ''}';
+    final l = context.l10n;
+    final summary = '${t.label}\n${fmtDate(_start!)}${end != _start ? ' – ${fmtDate(end)}' : ''}'
+        '${_part == 1 ? ' ${l.firstPartSuffix}' : _part == 2 ? ' ${l.secondPartSuffix}' : _part == 3 ? ' ${_hm(_from!)}-${_hm(_to!)}' : ''}';
     if (!await _confirmSend(context, summary) || !mounted) return;
     setState(() => _busy = true);
     try {
@@ -81,7 +83,7 @@ class _NewAbsenceScreenState extends State<NewAbsenceScreen> {
         hourEnd: _part == 3 ? _hm(_to!) : null,
         remark: _remark.text.trim(),
       );
-      messenger.showSnackBar(const SnackBar(content: Text('Request sent')));
+      messenger.showSnackBar(SnackBar(content: Text(L10n.current.requestSent)));
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.toString())));
@@ -93,7 +95,7 @@ class _NewAbsenceScreenState extends State<NewAbsenceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Absence request')),
+      appBar: AppBar(title: Text(context.l10n.absenceRequest)),
       body: AsyncBody<List<AbsenceType>>(
         loader: () => _types,
         builder: (context, types) {
@@ -105,7 +107,7 @@ class _NewAbsenceScreenState extends State<NewAbsenceScreen> {
               DropdownButtonFormField<AbsenceType>(
                 initialValue: t,
                 isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
+                decoration: InputDecoration(labelText: context.l10n.typeLabel, border: const OutlineInputBorder()),
                 items: [for (final a in types) DropdownMenuItem(value: a, child: Text(a.label, overflow: TextOverflow.ellipsis))],
                 onChanged: (v) => setState(() {
                   _type = v;
@@ -118,9 +120,9 @@ class _NewAbsenceScreenState extends State<NewAbsenceScreen> {
                 SegmentedButton<int>(
                   showSelectedIcon: false,
                   segments: [
-                    if (t.allowFullday) const ButtonSegment(value: 0, label: Text('Full day')),
-                    if (t.allowDaypart) ...const [ButtonSegment(value: 1, label: Text('1st part')), ButtonSegment(value: 2, label: Text('2nd part'))],
-                    if (t.allowHours) const ButtonSegment(value: 3, label: Text('Hours')),
+                    if (t.allowFullday) ButtonSegment(value: 0, label: Text(context.l10n.fullDay)),
+                    if (t.allowDaypart) ...[ButtonSegment(value: 1, label: Text(context.l10n.firstPart)), ButtonSegment(value: 2, label: Text(context.l10n.secondPart))],
+                    if (t.allowHours) ButtonSegment(value: 3, label: Text(context.l10n.hours)),
                   ],
                   selected: {_part},
                   onSelectionChanged: (s) => setState(() => _part = s.first),
@@ -128,7 +130,7 @@ class _NewAbsenceScreenState extends State<NewAbsenceScreen> {
               const SizedBox(height: 16),
               OutlinedButton.icon(
                 icon: const Icon(Icons.event),
-                label: Text(_start == null ? (range ? 'Start date' : 'Date') : ymd(_start!)),
+                label: Text(_start == null ? (range ? context.l10n.startDate : context.l10n.dateLabel) : fmtDate(_start!)),
                 onPressed: () async {
                   final d = await _pickDate(_start);
                   if (d != null) setState(() => _start = d);
@@ -138,7 +140,7 @@ class _NewAbsenceScreenState extends State<NewAbsenceScreen> {
                 const SizedBox(height: 8),
                 OutlinedButton.icon(
                   icon: const Icon(Icons.event),
-                  label: Text(_end == null ? 'End date (optional)' : ymd(_end!)),
+                  label: Text(_end == null ? context.l10n.endDateOptional : fmtDate(_end!)),
                   onPressed: () async {
                     final d = await _pickDate(_end ?? _start);
                     if (d != null) setState(() => _end = d);
@@ -155,7 +157,7 @@ class _NewAbsenceScreenState extends State<NewAbsenceScreen> {
                           final v = await showTimePicker(context: context, initialTime: _from ?? const TimeOfDay(hour: 9, minute: 0));
                           if (v != null) setState(() => _from = v);
                         },
-                        child: Text(_from == null ? 'From' : _hm(_from!)),
+                        child: Text(_from == null ? context.l10n.fromLabel : _hm(_from!)),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -165,7 +167,7 @@ class _NewAbsenceScreenState extends State<NewAbsenceScreen> {
                           final v = await showTimePicker(context: context, initialTime: _to ?? const TimeOfDay(hour: 10, minute: 0));
                           if (v != null) setState(() => _to = v);
                         },
-                        child: Text(_to == null ? 'To' : _hm(_to!)),
+                        child: Text(_to == null ? context.l10n.toLabel : _hm(_to!)),
                       ),
                     ),
                   ],
@@ -175,10 +177,10 @@ class _NewAbsenceScreenState extends State<NewAbsenceScreen> {
               TextField(
                 controller: _remark,
                 maxLines: 2,
-                decoration: InputDecoration(labelText: t?.needRemark == true ? 'Remark (required)' : 'Remark', border: const OutlineInputBorder()),
+                decoration: InputDecoration(labelText: t?.needRemark == true ? context.l10n.remarkRequiredLabel : context.l10n.remark, border: const OutlineInputBorder()),
               ),
               const SizedBox(height: 20),
-              FilledButton(onPressed: _busy ? null : _send, child: _busy ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Send request')),
+              FilledButton(onPressed: _busy ? null : _send, child: _busy ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) : Text(context.l10n.sendRequest)),
             ],
           );
         },
@@ -211,18 +213,18 @@ class _NewClockingRequestScreenState extends State<NewClockingRequestScreen> {
   Future<void> _send() async {
     final messenger = ScaffoldMessenger.of(context);
     if (_date == null || _from == null || _to == null) {
-      messenger.showSnackBar(const SnackBar(content: Text('Choose date, start and end')));
+      messenger.showSnackBar(SnackBar(content: Text(L10n.current.chooseDateStartEnd)));
       return;
     }
     if (_to!.hour * 60 + _to!.minute <= _from!.hour * 60 + _from!.minute) {
-      messenger.showSnackBar(const SnackBar(content: Text('End must be after start')));
+      messenger.showSnackBar(SnackBar(content: Text(L10n.current.endAfterStartShort)));
       return;
     }
-    if (!await _confirmSend(context, 'Clocking ${ymd(_date!)}\n${_hm(_from!)} – ${_hm(_to!)}') || !mounted) return;
+    if (!await _confirmSend(context, L10n.current.clockingSummary(fmtDate(_date!), _hm(_from!), _hm(_to!))) || !mounted) return;
     setState(() => _busy = true);
     try {
       await MyEraApi.instance.requestClocking(_date!, _hm(_from!), _hm(_to!), remark: _remark.text.trim());
-      messenger.showSnackBar(const SnackBar(content: Text('Request sent')));
+      messenger.showSnackBar(SnackBar(content: Text(L10n.current.requestSent)));
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.toString())));
@@ -234,13 +236,13 @@ class _NewClockingRequestScreenState extends State<NewClockingRequestScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Clocking request')),
+      appBar: AppBar(title: Text(context.l10n.clockingRequest)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           OutlinedButton.icon(
             icon: const Icon(Icons.event),
-            label: Text(_date == null ? 'Date' : ymd(_date!)),
+            label: Text(_date == null ? context.l10n.dateLabel : fmtDate(_date!)),
             onPressed: () async {
               final d = await showDatePicker(
                 context: context,
@@ -260,7 +262,7 @@ class _NewClockingRequestScreenState extends State<NewClockingRequestScreen> {
                     final v = await showTimePicker(context: context, initialTime: _from ?? const TimeOfDay(hour: 8, minute: 0));
                     if (v != null) setState(() => _from = v);
                   },
-                  child: Text(_from == null ? 'Clock in' : _hm(_from!)),
+                  child: Text(_from == null ? context.l10n.inLabel : _hm(_from!)),
                 ),
               ),
               const SizedBox(width: 8),
@@ -270,15 +272,15 @@ class _NewClockingRequestScreenState extends State<NewClockingRequestScreen> {
                     final v = await showTimePicker(context: context, initialTime: _to ?? const TimeOfDay(hour: 17, minute: 0));
                     if (v != null) setState(() => _to = v);
                   },
-                  child: Text(_to == null ? 'Clock out' : _hm(_to!)),
+                  child: Text(_to == null ? context.l10n.outLabel : _hm(_to!)),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          TextField(controller: _remark, maxLines: 2, decoration: const InputDecoration(labelText: 'Remark', border: OutlineInputBorder())),
+          TextField(controller: _remark, maxLines: 2, decoration: InputDecoration(labelText: context.l10n.remark, border: const OutlineInputBorder())),
           const SizedBox(height: 20),
-          FilledButton(onPressed: _busy ? null : _send, child: _busy ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Send request')),
+          FilledButton(onPressed: _busy ? null : _send, child: _busy ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) : Text(context.l10n.sendRequest)),
         ],
       ),
     );

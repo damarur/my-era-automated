@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../l10n.dart';
 import '../scheduler.dart';
 import '../settings.dart';
 import '../theme_controller.dart';
-import 'common.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -28,10 +28,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) return;
     final short = [
       for (var d = 1; d <= 5; d++)
-        if (s.days[d]!.breakEnabled && toMin(s.days[d]!.breakEnd) - toMin(s.days[d]!.breakStart) < 30) dayNames[d - 1]
+        if (s.days[d]!.breakEnabled && toMin(s.days[d]!.breakEnd) - toMin(s.days[d]!.breakStart) < 30) weekdayShort(d)
     ];
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(short.isEmpty ? 'Saved' : 'Saved. Warning: break under 30 min on ${short.join(', ')}')),
+      SnackBar(content: Text(short.isEmpty ? context.l10n.savedOk : context.l10n.savedWarnShortBreak(short.join(', ')))),
     );
   }
 
@@ -49,21 +49,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setD) => AlertDialog(
-          title: Text(standard ? 'Standard 7h 36m' : 'Irregular schedule'),
+          title: Text(standard ? context.l10n.presetStandardTitle : context.l10n.presetIrregularTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(standard ? '7h 36m per day from the start time, with the break below. Clock out is calculated.' : '8h Mon–Thu (start + 8h + break) and 6h on Fri without break (start + 6h).'),
+              Text(standard ? context.l10n.presetStandardDesc : context.l10n.presetIrregularDesc),
               const SizedBox(height: 12),
-              _timeRow('Start', start, (v) => setD(() => start = v)),
-              _timeRow('Break from', bs, (v) => setD(() => bs = v)),
-              _timeRow('Break to', be, (v) => setD(() => be = v)),
+              _timeRow(context.l10n.start, start, (v) => setD(() => start = v)),
+              _timeRow(context.l10n.breakFrom, bs, (v) => setD(() => bs = v)),
+              _timeRow(context.l10n.breakTo, be, (v) => setD(() => be = v)),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Apply')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.l10n.cancel)),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.l10n.apply)),
           ],
         ),
       ),
@@ -94,15 +94,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final ok = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Auto clock'),
-          content: const Text(
-            'The app will clock in and out for you at the scheduled times, even when it is closed. '
-            'Android may delay or skip it (battery saver, device asleep). It re-checks MyEra first and '
-            'never doubles a clocking, but you stay responsible for your clockings. Keep checking them.',
-          ),
+          title: Text(context.l10n.autoClock),
+          content: Text(context.l10n.autoClockWarning),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('I understand')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.l10n.cancel)),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.l10n.iUnderstand)),
           ],
         ),
       );
@@ -113,70 +109,127 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await _save();
   }
 
+  Widget _section(BuildContext context, String title, {String? hint}) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title.toUpperCase(), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.8, color: cs.primary)),
+          if (hint != null) Padding(padding: const EdgeInsets.only(top: 2), child: Text(hint, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant))),
+        ],
+      ),
+    );
+  }
+
+  Widget _card(BuildContext context, Widget child, {EdgeInsets margin = const EdgeInsets.symmetric(horizontal: 16)}) {
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      margin: margin,
+      elevation: 0,
+      color: cs.surfaceContainerLow,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5))),
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = _s;
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
       body: s == null
           ? const Center(child: CircularProgressIndicator())
           : ListView(
+              padding: const EdgeInsets.only(bottom: 32),
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  child: ValueListenableBuilder<ThemeMode>(
-                    valueListenable: ThemeController.instance,
-                    builder: (context, mode, _) => Column(
+                _section(context, context.l10n.settingsAppearance),
+                _card(
+                  context,
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Theme'),
-                        const SizedBox(height: 8),
-                        SegmentedButton<ThemeMode>(
-                          showSelectedIcon: false,
-                          segments: const [
-                            ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.brightness_auto), label: Text('System')),
-                            ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode), label: Text('Light')),
-                            ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode), label: Text('Dark')),
-                          ],
-                          selected: {mode},
-                          onSelectionChanged: (v) => ThemeController.instance.set(v.first),
+                        ValueListenableBuilder<ThemeMode>(
+                          valueListenable: ThemeController.instance,
+                          builder: (context, mode, _) => SegmentedButton<ThemeMode>(
+                            showSelectedIcon: false,
+                            segments: [
+                              ButtonSegment(value: ThemeMode.system, icon: const Icon(Icons.brightness_auto), label: Text(context.l10n.themeSystem)),
+                              ButtonSegment(value: ThemeMode.light, icon: const Icon(Icons.light_mode), label: Text(context.l10n.themeLight)),
+                              ButtonSegment(value: ThemeMode.dark, icon: const Icon(Icons.dark_mode), label: Text(context.l10n.themeDark)),
+                            ],
+                            selected: {mode},
+                            onSelectionChanged: (v) => ThemeController.instance.set(v.first),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(context.l10n.settingsLanguage, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                        const SizedBox(height: 6),
+                        ValueListenableBuilder<Locale?>(
+                          valueListenable: LocaleController.instance,
+                          builder: (context, locale, _) => SegmentedButton<String>(
+                            showSelectedIcon: false,
+                            segments: [
+                              ButtonSegment(value: 'system', icon: const Icon(Icons.language), label: Text(context.l10n.languageSystem)),
+                              const ButtonSegment(value: 'en', label: Text('English')),
+                              const ButtonSegment(value: 'es', label: Text('Español')),
+                            ],
+                            selected: {locale?.languageCode ?? 'system'},
+                            onSelectionChanged: (v) async {
+                              await LocaleController.instance.set(v.first == 'system' ? null : Locale(v.first));
+                              // Reminders are planned with the texts of the current language.
+                              await reschedule().catchError((Object _) {});
+                            },
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
-                const Divider(),
-                SwitchListTile(
-                  title: const Text('Clock reminders'),
-                  subtitle: const Text('Notification at each scheduled clock in/out'),
-                  value: s.remindersEnabled,
-                  onChanged: (v) {
-                    setState(() => s.remindersEnabled = v);
-                    _save();
-                  },
+                _section(context, context.l10n.settingsClocking),
+                _card(
+                  context,
+                  Column(
+                    children: [
+                      SwitchListTile(
+                        secondary: const Icon(Icons.notifications_active_outlined),
+                        title: Text(context.l10n.clockReminders),
+                        subtitle: Text(context.l10n.clockRemindersSub),
+                        value: s.remindersEnabled,
+                        onChanged: (v) {
+                          setState(() => s.remindersEnabled = v);
+                          _save();
+                        },
+                      ),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      SwitchListTile(
+                        secondary: const Icon(Icons.auto_mode_outlined),
+                        title: Text(context.l10n.autoClock),
+                        subtitle: Text(context.l10n.autoClockSub),
+                        value: s.autoClockActive,
+                        onChanged: _setAutoClock,
+                      ),
+                    ],
+                  ),
                 ),
-                SwitchListTile(
-                  title: const Text('Auto clock'),
-                  subtitle: const Text('Clock in/out automatically at the scheduled times'),
-                  value: s.autoClockActive,
-                  onChanged: _setAutoClock,
-                ),
-                const Divider(),
+                _section(context, context.l10n.weeklySchedule, hint: context.l10n.tapToChange),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
-                      Expanded(child: OutlinedButton(onPressed: () => _applyPreset(true), child: const Text('Preset: Standard'))),
+                      Expanded(child: OutlinedButton.icon(icon: const Icon(Icons.bolt, size: 18), label: Text(context.l10n.presetStandard), onPressed: () => _applyPreset(true))),
                       const SizedBox(width: 8),
-                      Expanded(child: OutlinedButton(onPressed: () => _applyPreset(false), child: const Text('Preset: Irregular'))),
+                      Expanded(child: OutlinedButton.icon(icon: const Icon(Icons.bolt, size: 18), label: Text(context.l10n.presetIrregular), onPressed: () => _applyPreset(false))),
                     ],
                   ),
                 ),
-                for (var d = 1; d <= 5; d++) _dayCard(s, d),
+                for (var d = 1; d <= 5; d++) _dayCard(context, s, d),
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   child: Text(
-                    'The break is unpaid and deducted from the daily worked time. The minimum required break is 30 min; switch the break off for days without one. The daily target is only used to compare against the worked time in the summary.',
+                    context.l10n.scheduleFootnote,
                     style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 ),
@@ -185,38 +238,115 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _dayCard(AppSettings s, int d) {
+  /// Tappable time value with a small caption on top.
+  Widget _timeTile(BuildContext context, String caption, IconData icon, String value, VoidCallback onTap) {
+    final cs = Theme.of(context).colorScheme;
+    return Expanded(
+      child: Material(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), border: Border.all(color: cs.outlineVariant)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Icon(icon, size: 13, color: cs.onSurfaceVariant),
+                  const SizedBox(width: 4),
+                  Text(caption, style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+                ]),
+                const SizedBox(height: 2),
+                Text(value, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Compact switch: the default Material one is too big next to the time tiles.
+  Widget _miniSwitch(bool value, ValueChanged<bool> onChanged) => SizedBox(
+        height: 24,
+        child: FittedBox(child: Switch(value: value, onChanged: onChanged, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap)),
+      );
+
+  Widget _dayCard(BuildContext context, AppSettings s, int d) {
+    final cs = Theme.of(context).colorScheme;
     final c = s.days[d]!;
     void edit(void Function() f) {
       setState(f);
       _save();
     }
 
-    return Card(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+    Future<void> pick(String current, void Function(String) set) async {
+      final v = await _pickTime(current);
+      if (v != null) edit(() => set(v));
+    }
+
+    final net = toMin(c.outTime) - toMin(c.inTime) - (c.breakEnabled ? toMin(c.breakEnd) - toMin(c.breakStart) : 0);
+    final netText = net > 0 ? context.l10n.netTime('${net ~/ 60}h ${(net % 60).toString().padLeft(2, '0')}m') : '';
+    const gap = SizedBox(height: 12);
+    const hgap = SizedBox(width: 8);
+
+    return _card(
+      context,
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      Padding(
+        padding: const EdgeInsets.all(14),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(dayNames[d - 1], style: const TextStyle(fontWeight: FontWeight.w600)),
-              value: c.enabled,
-              onChanged: (v) => edit(() => c.enabled = v),
+            SizedBox(
+              height: 28,
+              child: Row(
+                children: [
+                  Text(weekdayLong(d), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  const SizedBox(width: 8),
+                  if (c.enabled) Text(netText, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                  const Spacer(),
+                  _miniSwitch(c.enabled, (v) => edit(() => c.enabled = v)),
+                ],
+              ),
             ),
             if (c.enabled) ...[
-              _timeRow('Clock in', c.inTime, (v) => edit(() => c.inTime = v)),
-              _timeRow('Clock out', c.outTime, (v) => edit(() => c.outTime = v)),
-              _timeRow('Target', c.target, (v) => edit(() => c.target = v)),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Lunch break'),
-                value: c.breakEnabled,
-                onChanged: (v) => edit(() => c.breakEnabled = v),
+              gap,
+              Row(
+                children: [
+                  _timeTile(context, context.l10n.inLabel, Icons.login, c.inTime, () => pick(c.inTime, (v) => c.inTime = v)),
+                  hgap,
+                  _timeTile(context, context.l10n.outLabel, Icons.logout, c.outTime, () => pick(c.outTime, (v) => c.outTime = v)),
+                  hgap,
+                  _timeTile(context, context.l10n.target, Icons.flag_outlined, c.target, () => pick(c.target, (v) => c.target = v)),
+                ],
+              ),
+              gap,
+              SizedBox(
+                height: 28,
+                child: Row(
+                  children: [
+                    Icon(Icons.restaurant_outlined, size: 18, color: cs.onSurfaceVariant),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(context.l10n.lunchBreak)),
+                    _miniSwitch(c.breakEnabled, (v) => edit(() => c.breakEnabled = v)),
+                  ],
+                ),
               ),
               if (c.breakEnabled) ...[
-                _timeRow('Break from', c.breakStart, (v) => edit(() => c.breakStart = v)),
-                _timeRow('Break to', c.breakEnd, (v) => edit(() => c.breakEnd = v)),
+                gap,
+                Row(
+                  children: [
+                    _timeTile(context, context.l10n.fromLabel, Icons.schedule, c.breakStart, () => pick(c.breakStart, (v) => c.breakStart = v)),
+                    hgap,
+                    _timeTile(context, context.l10n.toLabel, Icons.schedule, c.breakEnd, () => pick(c.breakEnd, (v) => c.breakEnd = v)),
+                    hgap,
+                    const Expanded(child: SizedBox.shrink()),
+                  ],
+                ),
               ],
             ],
           ],

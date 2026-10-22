@@ -41,6 +41,10 @@ dependencies:
   workmanager: ^0.10.10
   timezone: ^0.11.2
   intl: ^0.20.3
+  pdf: ^3.13.1
+  printing: ^5.15.1
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:
@@ -59,6 +63,7 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  generate: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
@@ -67,6 +72,8 @@ flutter:
 
   assets:
     - assets/icon.png
+    - assets/fonts/Roboto-Regular.ttf
+    - assets/fonts/Roboto-Bold.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

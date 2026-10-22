@@ -42,8 +42,61 @@ int effectiveMs(List<Clocking> clockings, String key, bool isToday, DayConfig cf
   return total;
 }
 
+/// One line of a day's timeline: a worked block (in -> out, also in -> in / out -> out) with its
+/// effective time, or a clocked break (out -> in).
+class TimelineItem {
+  TimelineItem.block(this.from, this.to, this.ms, this.lunchMs, {this.open = false}) : isBreak = false;
+  TimelineItem.pause(this.from, this.to, this.ms)
+      : isBreak = true,
+        lunchMs = 0,
+        open = false;
+
+  final Clocking from;
+  final Clocking? to; // null: block still open today (or a lone clocking)
+  final int ms; // effective time (lunch break already deducted); the break length for a pause
+  final int lunchMs; // configured lunch break inside the block
+  final bool isBreak;
+  final bool open;
+}
+
+/// Builds the timeline of a day. The effective times of the blocks add up to [effectiveMs].
+List<TimelineItem> buildTimeline(List<Clocking> clockings, String key, bool isToday, DayConfig cfg, [DateTime? now]) {
+  final bs = DateTime.parse('${key}T${cfg.breakStart}').millisecondsSinceEpoch;
+  final be = DateTime.parse('${key}T${cfg.breakEnd}').millisecondsSinceEpoch;
+  int lunchIn(int a, int b) {
+    if (!cfg.breakEnabled || be <= bs) return 0;
+    final o = (b < be ? b : be) - (a > bs ? a : bs);
+    return o > 0 ? o : 0;
+  }
+
+  final items = <TimelineItem>[];
+  for (var i = 1; i < clockings.length; i++) {
+    final p = clockings[i - 1], c = clockings[i];
+    final a = p.time.millisecondsSinceEpoch, b = c.time.millisecondsSinceEpoch;
+    if (!p.isIn && c.isIn) {
+      // A break only makes sense after some worked time.
+      if (items.isNotEmpty) items.add(TimelineItem.pause(p, c, b - a));
+    } else {
+      final lunch = lunchIn(a, b);
+      items.add(TimelineItem.block(p, c, b - a - lunch, lunch));
+    }
+  }
+  if (clockings.isNotEmpty) {
+    final last = clockings.last;
+    if (last.isIn) {
+      final a = last.time.millisecondsSinceEpoch;
+      final b = isToday ? (now ?? DateTime.now()).millisecondsSinceEpoch : a;
+      final lunch = lunchIn(a, b);
+      items.add(TimelineItem.block(last, null, isToday ? b - a - lunch : 0, lunch, open: isToday));
+    } else if (clockings.length == 1) {
+      items.add(TimelineItem.block(last, null, 0, 0));
+    }
+  }
+  return items;
+}
+
 class DayRow {
-  DayRow({required this.date, required this.key, required this.clockings, required this.off, required this.target, required this.ms, required this.pending});
+  DayRow({required this.date, required this.key, required this.clockings, required this.off, required this.target, required this.ms, required this.pending, required this.cfg, required this.baseCfg, this.lunchEdited = false, this.anomalies = const [], this.absenceLabels = const []});
   final DateTime date;
   final String key;
   final List<Clocking> clockings;
@@ -51,6 +104,11 @@ class DayRow {
   final int target;
   final int ms;
   final bool pending;
+  final DayConfig cfg; // effective config of the day (lunch override applied)
+  final DayConfig baseCfg; // weekly settings of that weekday
+  final bool lunchEdited;
+  final List<String> anomalies; // incidencias of the day
+  final List<String> absenceLabels; // e.g. "U-Vacaciones"
 }
 
 class PeriodSummary {
@@ -92,13 +150,13 @@ Future<PeriodSummary> buildSummary(AppSettings settings, bool month, int offset,
   final rows = <DayRow>[];
   var total = 0, totalTarget = 0, fullTarget = 0;
   for (var w = first; !w.isAfter(last); w = DateTime(w.year, w.month, w.day + 7)) {
-    final days = <({DateTime d, String key, DayConfig cfg, CalendarDay? entry, String? off})>[];
+    final days = <({DateTime d, String key, DayConfig cfg, DayConfig base, CalendarDay? entry, String? off})>[];
     for (var i = 0; i < 5; i++) {
       final d = DateTime(w.year, w.month, w.day + i);
       final key = ymd(d);
       final entry = byDate[key];
       final off = entry == null ? null : entry.absences.isNotEmpty ? 'Absent' : entry.holiday ? 'Holiday' : null;
-      days.add((d: d, key: key, cfg: settings.days[d.weekday]!, entry: entry, off: off));
+      days.add((d: d, key: key, cfg: settings.configFor(d), base: settings.days[d.weekday]!, entry: entry, off: off));
     }
     final avg = days.fold<int>(0, (s, x) => s + x.cfg.targetMs) ~/ 5;
     final redistribute = days.any((x) => x.off != null);
@@ -113,7 +171,7 @@ Future<PeriodSummary> buildSummary(AppSettings settings, bool month, int offset,
       fullTarget += target;
       // The week view keeps the full weekly target; in the month view days not due yet are left out.
       totalTarget += month && x.key.compareTo(today) > 0 ? 0 : target;
-      rows.add(DayRow(date: x.d, key: x.key, clockings: clockings, off: x.off, target: target, ms: ms, pending: pending));
+      rows.add(DayRow(date: x.d, key: x.key, clockings: clockings, off: x.off, target: target, ms: ms, pending: pending, cfg: x.cfg, baseCfg: x.base, lunchEdited: settings.hasLunchOverride(x.d), anomalies: x.entry?.anomalies ?? const [], absenceLabels: x.entry?.absenceLabels ?? const []));
     }
   }
   return PeriodSummary(rows, total, totalTarget, fullTarget);

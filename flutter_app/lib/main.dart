@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'api.dart';
+import 'l10n.dart';
 import 'scheduler.dart';
 import 'theme_controller.dart';
 import 'screens/login_screen.dart';
@@ -9,6 +12,7 @@ import 'screens/shell.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ThemeController.instance.load();
+  await L10n.init();
   runApp(const MyEraApp());
   // Don't block the first frame on notification permission / WorkManager setup.
   initScheduler().catchError((Object e) => debugPrint('Scheduler init failed: $e'));
@@ -22,13 +26,31 @@ class MyEraApp extends StatelessWidget {
     const seed = Color(0xFF05164D); // dark navy
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: ThemeController.instance,
-      builder: (context, mode, _) => MaterialApp(
-        title: 'MyEra',
-        debugShowCheckedModeBanner: false,
-        themeMode: mode,
-        theme: ThemeData(colorSchemeSeed: seed, useMaterial3: true),
-        darkTheme: ThemeData(colorSchemeSeed: seed, useMaterial3: true, brightness: Brightness.dark),
-        home: const _Root(),
+      builder: (context, mode, _) => ValueListenableBuilder<Locale?>(
+        valueListenable: LocaleController.instance,
+        builder: (context, locale, _) => MaterialApp(
+          title: 'MyEra',
+          debugShowCheckedModeBanner: false,
+          themeMode: mode,
+          theme: ThemeData(colorSchemeSeed: seed, useMaterial3: true),
+          darkTheme: ThemeData(colorSchemeSeed: seed, useMaterial3: true, brightness: Brightness.dark),
+          // null follows the device language; unsupported device languages fall back to English.
+          locale: locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          localeResolutionCallback: (device, supported) {
+            final resolved = locale ?? supported.where((l) => l.languageCode == device?.languageCode).firstOrNull ?? const Locale('en');
+            // Keeps the strings of code without a context (API errors, notifications, PDF) in sync.
+            L10n.set(resolved);
+            return resolved;
+          },
+          home: const _Root(),
+        ),
       ),
     );
   }
